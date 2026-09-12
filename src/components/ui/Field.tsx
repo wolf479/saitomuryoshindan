@@ -36,7 +36,7 @@ export function Field({ label, htmlFor, hint, error, required, className = "", c
 }
 
 const BASE =
-  "w-full rounded-md border bg-panel px-3 text-base text-ink outline-none placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-lg border bg-panel px-3 text-base text-ink outline-none placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-60";
 
 function borderClass(invalid?: boolean): string {
   return invalid ? "border-fail" : "border-line";

@@ -19,7 +19,7 @@ const TONE: Record<StatusTone, string> = {
 /** 注意書き・エラーの帯。枠 + soft 地 + 判定色の文字、アイコン付き */
 export function Callout({ tone = "info", title, children, className = "" }: CalloutProps) {
   return (
-    <div role={tone === "fail" ? "alert" : "note"} className={`flex gap-2.5 rounded-sm border p-4 text-sm leading-relaxed ${TONE[tone]} ${className}`}>
+    <div role={tone === "fail" ? "alert" : "note"} className={`flex gap-2.5 rounded-lg border p-4 text-sm leading-relaxed ${TONE[tone]} ${className}`}>
       <StatusIcon status={tone} className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0 flex-1">
         {title && <p className="font-bold">{title}</p>}

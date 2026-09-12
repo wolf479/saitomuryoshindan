@@ -24,7 +24,7 @@ export function SetupNotice({ missing, anyOf = false, title, className = "" }: S
   return (
     <div
       role="note"
-      className={`no-print rounded-sm border border-line bg-surface p-4 text-[13px] leading-relaxed text-ink ${className}`}
+      className={`no-print rounded-lg border border-line bg-surface p-4 text-[13px] leading-relaxed text-ink ${className}`}
     >
       <p className="font-bold">
         {title ??
@@ -35,7 +35,7 @@ export function SetupNotice({ missing, anyOf = false, title, className = "" }: S
       <ul className="mt-2 space-y-1">
         {missing.map((m) => (
           <li key={`${m.key}:${m.envVar}`} className="flex flex-wrap gap-x-2">
-            <code className="rounded-sm border border-line bg-panel px-1 font-mono text-[12px] text-ink">{m.envVar}</code>
+            <code className="rounded-lg border border-line bg-panel px-1 font-mono text-[12px] text-ink">{m.envVar}</code>
             <span className="text-muted">{m.description}</span>
           </li>
         ))}
@@ -44,7 +44,7 @@ export function SetupNotice({ missing, anyOf = false, title, className = "" }: S
         プロジェクト直下の <code className="font-mono text-[12px]">.env.local</code> に次の行を追加し、開発サーバーを再起動してください。
         キーはサーバーだけが読み、ブラウザには渡りません。
       </p>
-      <pre className="mt-2 overflow-x-auto rounded-sm border border-line bg-panel p-3 font-mono text-[12px] leading-relaxed text-ink">
+      <pre className="mt-2 overflow-x-auto rounded-lg border border-line bg-panel p-3 font-mono text-[12px] leading-relaxed text-ink">
         {envLines.map((v) => `${v}=`).join("\n")}
       </pre>
       <p className="mt-3">

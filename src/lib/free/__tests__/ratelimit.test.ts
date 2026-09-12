@@ -28,17 +28,17 @@ describe("クライアントごとの回数制限", () => {
 describe("1 日の全体上限", () => {
   it("上限に達したら false。日付が変われば戻る", () => {
     const d1 = Date.UTC(2026, 8, 11, 10);
-    expect(takeDailyToken("meo", 2, d1)).toBe(true);
-    expect(takeDailyToken("meo", 2, d1)).toBe(true);
-    expect(takeDailyToken("meo", 2, d1)).toBe(false);
-    expect(dailyCount("meo", d1)).toBe(2);
+    expect(takeDailyToken("faq", 2, d1)).toBe(true);
+    expect(takeDailyToken("faq", 2, d1)).toBe(true);
+    expect(takeDailyToken("faq", 2, d1)).toBe(false);
+    expect(dailyCount("faq", d1)).toBe(2);
     const d2 = Date.UTC(2026, 8, 12, 1);
-    expect(takeDailyToken("meo", 2, d2)).toBe(true);
-    expect(dailyCount("meo", d2)).toBe(1);
+    expect(takeDailyToken("faq", 2, d2)).toBe(true);
+    expect(dailyCount("faq", d2)).toBe(1);
   });
 
   it("上限 0 なら常に拒否（無料枠を止めるスイッチ）", () => {
-    expect(takeDailyToken("meo", 0, 0)).toBe(false);
+    expect(takeDailyToken("faq", 0, 0)).toBe(false);
   });
 });
 
@@ -51,11 +51,11 @@ describe("補助", () => {
   });
 
   it("環境変数の整数は不正なら既定", () => {
-    vi.stubEnv("FREE_MEO_DAILY_LIMIT", "abc");
-    expect(envInt("FREE_MEO_DAILY_LIMIT", 500)).toBe(500);
-    vi.stubEnv("FREE_MEO_DAILY_LIMIT", "0");
-    expect(envInt("FREE_MEO_DAILY_LIMIT", 500)).toBe(0);
-    vi.stubEnv("FREE_MEO_DAILY_LIMIT", "1200");
-    expect(envInt("FREE_MEO_DAILY_LIMIT", 500)).toBe(1200);
+    vi.stubEnv("FREE_FAQ_DAILY_LIMIT", "abc");
+    expect(envInt("FREE_FAQ_DAILY_LIMIT", 500)).toBe(500);
+    vi.stubEnv("FREE_FAQ_DAILY_LIMIT", "0");
+    expect(envInt("FREE_FAQ_DAILY_LIMIT", 500)).toBe(0);
+    vi.stubEnv("FREE_FAQ_DAILY_LIMIT", "1200");
+    expect(envInt("FREE_FAQ_DAILY_LIMIT", 500)).toBe(1200);
   });
 });

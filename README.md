@@ -1,17 +1,16 @@
-# 無料 SEO・MEO・AIO 診断（切り出し版）
+# サイト健診
 
-SEO Checker（`app.seo-checker.tokyo`）から、**無料診断の機能だけ**を取り出して単体で動くようにした Next.js アプリです。
+URL を入れるだけで、検索エンジンと AI 検索（AIO）に読まれる土台をルールベースで採点する Next.js アプリです。総合スコアと改善提案を報告書にまとめ、PDF で持ち帰れます。
 
-- **サイトの診断（`/`）** — URL を入れるだけ。検索エンジンと AI 検索（AIO）に読まれる土台をルールベースで採点し、報告書として PDF に出せます。**API キー不要**。
-- **店舗の診断（`/meo`）** — 店名を入れるだけ。Google マップの店舗情報（ビジネス プロフィール）を 4 カテゴリ・21 項目で採点します。**Google Places のキーが必要**。
-
-ログインはありません（この版は認証を持たない）。どちらの診断もそのまま公開して使えます。
+**API キーもログインも不要**で、そのまま公開して使えます（想定 FAQ の生成だけ任意で Anthropic のキーを使います）。
 
 ```bash
 npm install
-cp .env.example .env.local   # サイトの診断だけなら設定不要
+cp .env.example .env.local   # 診断だけなら設定不要
 npm run dev                  # http://localhost:3000
 ```
+
+サービスの呼び名（表示名・説明文）は `src/lib/brand.ts` が唯一の定義です。名前を変えるときはこのファイルだけを直せば、画面・メタデータ・PWA マニフェスト・PDF の奥付すべてに伝わります。
 
 ---
 
@@ -19,18 +18,15 @@ npm run dev                  # http://localhost:3000
 
 | パス | 内容 |
 |---|---|
-| `/` | 無料 SEO・AIO 診断（サイト） |
-| `/meo` | 無料 MEO 診断（Google マップの店舗） |
+| `/` | サイト診断（SEO・AIO） |
 | `/api/analyze` | 1 ページの診断 |
 | `/api/site` | サイト全体の診断（進捗を配信しながらクロール） |
 | `/api/faq` | 想定 FAQ の生成（`ANTHROPIC_API_KEY` があるときだけ） |
-| `/api/meo/search` | 店名・地域で店舗を検索 |
-| `/api/meo/report` | 選んだ店舗の採点 |
 | `/plans`・`/sign-up` | 本体サービスへの案内（`NEXT_PUBLIC_MAIN_APP_URL` へ転送するだけ） |
 
 ---
 
-## サイトの診断（`/`）
+## 診断（`/`）
 
 判定はすべてルールベースで、生成 AI は使っていません（想定 FAQ の生成のみ任意で AI を使います）。
 
@@ -78,22 +74,16 @@ npm run dev                  # http://localhost:3000
 
 ---
 
-## 店舗の診断（`/meo`）
+## FAQ 生成の上限
 
-店名・地域で検索して 1 店舗を選ぶと、公開情報だけで基本情報 / 投稿 / 写真 / レビューの 4 カテゴリ・21 項目を採点し、総合評価 A〜E・改善ヒント・総評（ルール生成）・口コミ情報（平均評価・件数・直近の口コミ・星の分布）を報告書にします。PDF 出力に対応。
-
-`GOOGLE_PLACES_API_KEY` が未設定なら、画面は「準備中」を出して実行できません（環境変数名は画面に出しません）。
-
-**Google Places には呼び出しごとに実費が出ます。** 公開して使う場合は上限の設定を確認してください。
+想定 FAQ の生成だけ Anthropic の API を呼びます。**呼び出しごとに実費が出ます。** 公開して使う場合は上限の設定を確認してください。
 
 | 守り | 既定 | 変え方 |
 |---|---|---|
-| IP ごと（検索） | 30 回 / 時 | `src/lib/free/ratelimit.ts` |
-| IP ごと（報告書） | 10 回 / 時 | `src/lib/free/ratelimit.ts` |
-| 全体（検索） | 1,500 回 / 日 | `FREE_MEO_DAILY_SEARCH_LIMIT` |
-| 全体（報告書） | 500 回 / 日 | `FREE_MEO_DAILY_LIMIT` |
+| IP ごと | 20 回 / 時 | `src/lib/free/ratelimit.ts` |
+| 全体 | 500 回 / 日 | `FREE_FAQ_DAILY_LIMIT` |
 
-`FREE_MEO_DAILY_LIMIT=0` にすると無料 MEO 診断を止められます。回数の記録はプロセス内のメモリなので、サーバーレスではインスタンスごとに独立します（上限は「おおよその歯止め」です）。
+同じ URL + 同じ本文は 1 時間キャッシュし、キャッシュに当たった分は数えません。`FREE_FAQ_DAILY_LIMIT=0` にすると FAQ 生成を止められます（診断そのものは動きます）。回数の記録はプロセス内のメモリなので、サーバーレスではインスタンスごとに独立します（上限は「おおよその歯止め」です）。
 
 ---
 
@@ -103,11 +93,10 @@ npm run dev                  # http://localhost:3000
 
 | 変数 | 要否 | 用途 |
 |---|---|---|
-| `GOOGLE_PLACES_API_KEY` | `/meo` に必須 | Google Places API (New) |
-| `FREE_MEO_DAILY_LIMIT` / `FREE_MEO_DAILY_SEARCH_LIMIT` | 任意 | 無料 MEO 診断の 1 日の上限 |
 | `ANTHROPIC_API_KEY` | 任意 | 想定 FAQ の生成。無ければその欄を出さない |
+| `FREE_FAQ_DAILY_LIMIT` | 任意 | FAQ 生成の 1 日の上限（既定 500） |
 | `SITE_MAX_PAGES` | 任意 | サイト全体モードのページ数上限（既定 300、最大 1000） |
-| `NEXT_PUBLIC_APP_VERSION` | 任意 | サイドバー下のバージョン表記 |
+| `NEXT_PUBLIC_APP_VERSION` | 任意 | フッターのバージョン表記 |
 | `NEXT_PUBLIC_CONTACT_NAME` / `NEXT_PUBLIC_CONTACT_URL` | 任意 | レポート末尾「次のステップ」の連絡先 |
 | `NEXT_PUBLIC_SERVICE_GUIDE_URL` | 任意 | 配布するサービス資料のファイル。未設定ならその場で PDF を組み立てる |
 | `NEXT_PUBLIC_MAIN_APP_URL` | 任意 | 有料プラン・登録の案内リンクの送り先（既定 `https://app.seo-checker.tokyo`） |
@@ -133,24 +122,22 @@ npm test           # vitest（判定ロジックの単体テスト）
 ```
 src/
   app/
-    page.tsx            # 無料 SEO・AIO 診断
-    meo/page.tsx        # 無料 MEO 診断
-    api/                # analyze / site / faq / meo（Route Handler、nodejs runtime）
+    page.tsx            # サイト診断（SEO・AIO）
+    api/                # analyze / site / faq（Route Handler、nodejs runtime）
   components/
-    free/               # 無料診断の画面とレポート
-    maps/report/        # MEO 報告書の表示
-    ui/ charts/ shell/  # 共通部品・依存なしの SVG グラフ・シェル
+    free/               # 診断の画面とレポート
+    ui/ charts/ shell/  # 共通部品・依存なしの SVG グラフ・シェル（ヘッダー / フッター）
   lib/
     analyzer/           # 判定ルール（fetch.ts の assertPublicHost + fetchText が唯一の取得経路）
     crawl/              # 全ページクロール（sitemap 展開 + 内部リンク BFS）
     report/             # レポートの導出（グレード・講評・優先改善）
-    maps/               # Google Places の取得と MEO の採点
     faq/                # 想定 FAQ の生成
-    free/ratelimit.ts   # 無料 MEO 診断の回数制限
+    free/ratelimit.ts   # FAQ 生成の回数制限
+    brand.ts            # サービスの呼び名（唯一の定義）
     ui/                 # 色トークンの単一定義（palette.ts / grade.ts）
 ```
 
-### 設計上の約束（本体から引き継いでいます）
+### 設計上の約束
 
 - **ユーザーが入れた URL をサーバーで取得するときは、必ず `assertPublicHost` → `fetchText`（`src/lib/analyzer/fetch.ts`）を通す。** リダイレクトは自分で追い、初回のホップを含めて毎回ホストを検査します（SSRF 対策）。
 - **色は `src/lib/ui/palette.ts` と `globals.css` の `@theme` トークンだけ**から取ります。JSX に生の hex は書きません。
@@ -159,26 +146,16 @@ src/
 
 ---
 
-## 本体（SEO Checker）との違い
-
-入っていないもの:
+## 入っていないもの
 
 - ログイン（Clerk）・課金（Stripe）・Supabase への保存
-- `/tools/*` のツール群、`/settings`、`/admin`、口コミ支援のアンケート（`/r/<slug>`）
+- `/tools/*` のツール群、`/settings`、`/admin`
+- MEO（Google マップ・店舗情報）の診断 — 扱いません
 - 利用規約・プライバシーポリシー・特商法表記のページ（**公開して使う場合はご自身で用意してください**）
 
-本体と中身が違うファイルは 4 つだけです（ほかはすべて本体と同じ中身をそのままコピーしています）。
+`/plans` と `/sign-up` は有料プラン・登録の案内として、`NEXT_PUBLIC_MAIN_APP_URL` の送り先へ転送するだけです。
 
-| ファイル | 変更点 |
-|---|---|
-| `src/app/layout.tsx` | `ClerkProvider` を外した |
-| `src/components/shell/AppShell.tsx` | ログインの有無を渡す引数を外した |
-| `src/components/shell/TopBar.tsx` | 右端のログイン表示を外した |
-| `src/components/shell/Sidebar.tsx` | 無料診断 2 本だけにした（ツール一覧・プランの鍵・要設定バッジ・マスター画面を削除） |
-
-この版だけにある追加ファイル: `src/lib/main-app.ts`、`src/app/plans/page.tsx`、`src/app/sign-up/page.tsx`（いずれも本体サービスへの案内用）。
-
-機能の定義（`src/lib/features/registry.ts`）と料金プラン（`src/lib/plans/catalog.ts`）は、サービス資料の PDF を組み立てるために本体と同じものをそのまま持っています。
+機能の定義（`src/lib/features/registry.ts`）と料金プラン（`src/lib/plans/catalog.ts`）は、サービス資料の PDF を組み立てるために持っています。
 
 ---
 
@@ -186,8 +163,6 @@ src/
 
 - **JavaScript で描画されるページ（SPA）** は取得した HTML に本文が無いため低スコアになります。代わりに「JS 描画依存の可能性」として警告を出します。
 - **キャッシュと回数制限はプロセス内**です。サーバーレスではインスタンスごとに独立します。
-- 対象サイトには `SEOChecker/0.1` の User-Agent でアクセスします。
+- 対象サイトには `SiteKenshin/0.1` の User-Agent でアクセスします。
 
 ---
-
-この zip は本体リポジトリの `node scripts/extract-free.mjs` で作っています（本体の更新に追従して作り直せます）。

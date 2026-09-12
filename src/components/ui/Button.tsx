@@ -20,7 +20,7 @@ const SIZE: Record<ButtonSize, string> = {
 
 /** ボタンのクラス列（Link や label に同じ見た目を付けたいとき用） */
 export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize = "md", extra = ""): string {
-  return `inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md font-bold outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT[variant]} ${SIZE[size]} ${extra}`;
+  return `inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-lg font-bold outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT[variant]} ${SIZE[size]} ${extra}`;
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -1,23 +1,30 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/AppShell";
+import { BRAND } from "@/lib/brand";
 import pkg from "../../package.json";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "無料 SEO・MEO・AIO 診断",
-    template: "%s | 無料 SEO・MEO・AIO 診断",
+    default: `${BRAND.name} | ${BRAND.tagline}`,
+    template: `%s | ${BRAND.name}`,
   },
-  description:
-    "URL を入れるだけで検索エンジンと AI 検索（AIO）に読まれる土台をルールベースで採点し、店名を入れるだけで Google マップの店舗情報を採点する無料診断。報告書として PDF 出力できます。ログイン不要。",
+  description: BRAND.description,
+  applicationName: BRAND.name,
+  openGraph: {
+    type: "website",
+    locale: "ja_JP",
+    siteName: BRAND.name,
+    title: `${BRAND.name} | ${BRAND.tagline}`,
+    description: BRAND.description,
+  },
 };
 
 /**
- * 切り出し版のルートレイアウト。
+ * ルートレイアウト。
  *
- * 本体（seo-checker）は Clerk でログインを扱うが、この版は無料診断だけなので
- * 認証は一切持たない（すべてのページが公開）。差分はここと AppShell / TopBar /
- * Sidebar の 4 ファイルだけに閉じている。
+ * 認証は一切持たない（すべてのページが公開）。サービスの呼び名は
+ * src/lib/brand.ts が唯一の定義で、ここはそれを metadata に写すだけ。
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

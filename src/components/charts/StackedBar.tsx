@@ -95,7 +95,7 @@ export function StackedBar({
           <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
             {series.map((s) => (
               <li key={s.label} className="inline-flex items-center gap-1">
-                <span aria-hidden className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: s.color }} />
+                <span aria-hidden className="inline-block h-3 w-3 rounded-lg" style={{ backgroundColor: s.color }} />
                 {s.label}
               </li>
             ))}
@@ -147,7 +147,7 @@ export function SegmentBar({
       <figcaption className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
         {segments.map((s) => (
           <span key={s.label} className="inline-flex items-center gap-1">
-            <span aria-hidden className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: s.color }} />
+            <span aria-hidden className="inline-block h-3 w-3 rounded-lg" style={{ backgroundColor: s.color }} />
             {s.label} <span className="tabular-nums">{s.value}</span>
           </span>
         ))}

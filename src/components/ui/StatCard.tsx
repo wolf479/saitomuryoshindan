@@ -33,7 +33,7 @@ export function StatCard({ label, value, unit, delta, hint, className = "" }: St
   const bad = delta ? (delta.positiveIsGood ?? true ? dir < 0 : dir > 0) : false;
   const deltaColor = good ? "text-pass" : bad ? "text-fail" : "text-muted";
   return (
-    <div className={`rounded-sm border border-line bg-panel px-4 py-3 ${className}`}>
+    <div className={`rounded-lg border border-line bg-panel px-4 py-3 ${className}`}>
       <div className="text-[11px] text-muted">{label}</div>
       <div className="mt-1 flex items-baseline gap-1">
         <span className="text-[22px] font-bold leading-none text-ink tabular-nums">{value}</span>

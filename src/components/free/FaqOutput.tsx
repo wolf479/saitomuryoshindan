@@ -42,7 +42,7 @@ function CodeBlock({ title, code, note }: { title: string; code: string; note: s
         </div>
         <CopyButton text={code} label="コピー" />
       </div>
-      <pre className="mt-2 max-h-80 overflow-auto rounded-sm border border-line bg-surface p-3 text-[11px] leading-relaxed text-ink">
+      <pre className="mt-2 max-h-80 overflow-auto rounded-lg border border-line bg-surface p-3 text-[11px] leading-relaxed text-ink">
         <code>{code}</code>
       </pre>
     </div>
@@ -57,7 +57,7 @@ export function FaqOutput({ faqs }: { faqs: FaqItem[] }) {
     <div>
       <ul className="space-y-2">
         {faqs.map((f, i) => (
-          <li key={i} className="rounded-sm border border-line p-3">
+          <li key={i} className="rounded-lg border border-line p-3">
             <p className="text-[14px] font-bold text-ink">Q. {f.question}</p>
             <p className="mt-1 text-[13px] leading-relaxed text-muted">A. {f.answer}</p>
           </li>

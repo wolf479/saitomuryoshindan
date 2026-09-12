@@ -145,7 +145,7 @@ export function Commentary({ lines }: { lines: readonly CommentaryLine[] }) {
 /** データが無いときの 1 行帯（bg-surface）。ダミーは出さない */
 export function EmptyLine({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-sm bg-surface px-3 py-2 text-[13px] text-muted">{children}</p>
+    <p className="rounded-lg bg-surface px-3 py-2 text-[13px] text-muted">{children}</p>
   );
 }
 

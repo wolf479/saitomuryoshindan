@@ -8,6 +8,7 @@
  * - 設定画面の JSON エクスポート / インポートは exportAll / importAll。
  */
 import type { z } from "zod";
+import { BRAND } from "@/lib/brand";
 
 export const KEY_PREFIX = "seo-checker:v1:";
 export const EXPORT_VERSION = 1;
@@ -193,7 +194,7 @@ export function importAll(json: string | unknown): ImportResult {
   }
   const env = data as Partial<ExportEnvelope>;
   if (env.app !== "seo-checker" || !env.stores || typeof env.stores !== "object") {
-    throw new Error("SEO Checker のエクスポートファイルではありません");
+    throw new Error(`${BRAND.name} のエクスポートファイルではありません`);
   }
   if (typeof env.version === "number" && env.version > EXPORT_VERSION) {
     throw new Error("新しいバージョンのエクスポートファイルです。アプリを更新してください");

@@ -36,7 +36,7 @@ export function ProgressPanel({
 
   return (
     <section
-      className="no-print mb-6 rounded-sm border border-line bg-panel p-4"
+      className="no-print mb-6 rounded-lg border border-line bg-panel p-4"
       aria-live="polite"
       aria-busy="true"
     >

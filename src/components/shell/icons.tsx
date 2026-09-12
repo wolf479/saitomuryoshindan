@@ -12,13 +12,17 @@ const base = {
   "aria-hidden": true,
 };
 
-/** ブランドマーク: 角形の中にチェック付きの文書（白線） */
+/**
+ * ブランドマーク: ブラウザウィンドウの中に心電図の波形。
+ * 「サイト（ウィンドウ）を健診する（波形）」を 1 つの形にしたもの。
+ * src/app/icon.svg は同じ形を単独ファイルにした写し（PWA / favicon 用）。
+ */
 export function LogoMark({ className = "" }: IconProps) {
   return (
     <svg {...base} className={className}>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M8 4v4h8V4" />
-      <path d="m8.5 14 2.5 2.5 4.5-5" />
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M3 8.5h18" />
+      <path d="M6.5 14.5h2.2l1.6-3.2 2.2 4.6 1.5-2.6h2.5" />
     </svg>
   );
 }

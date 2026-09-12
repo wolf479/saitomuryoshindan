@@ -11,7 +11,6 @@ export const INTEGRATION_KEYS = [
   "serpapi",
   "pagespeed",
   "ga4",
-  "places",
   "supabase",
 ] as const;
 
@@ -69,17 +68,11 @@ export const INTEGRATIONS: Record<IntegrationKey, IntegrationMeta> = {
     envVars: ["GA4_PROPERTY_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"],
     description: "生成 AI 流入分析・サイトレポート（GA4 Data API）",
   },
-  places: {
-    key: "places",
-    label: "Google マップ（Places API）",
-    envVars: ["GOOGLE_PLACES_API_KEY"],
-    description: "Google マップ・店舗情報（MEO）。自社と競合のビジネス プロフィールの比較と充実度の採点",
-  },
   supabase: {
     key: "supabase",
     label: "Supabase（データベース）",
     envVars: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
-    description: "Google マップ・店舗情報（MEO）の登録店舗と診断報告書の履歴。週 1 回の一斉更新の保存先",
+    description: "診断報告書の履歴と、週 1 回の一斉更新の保存先",
   },
 };
 

@@ -14,6 +14,7 @@ import { GRADE_BANDS } from "@/lib/ui/grade";
 import { palette } from "@/lib/ui/palette";
 import { Num, ReportSection, SubHeading } from "./report-parts";
 import { ServiceGuideButton } from "./ServiceGuideButton";
+import { BRAND } from "@/lib/brand";
 
 const TH = "border-b border-line px-2 py-2 text-left text-[12px] font-bold text-muted";
 const TD = "border-b border-line px-2 py-2 align-top text-[13px] text-ink";
@@ -179,7 +180,7 @@ export function MethodAppendix({
         表示速度・被リンク・検索順位は含みません。JavaScript で描画される内容は取得時点の HTML に含まれない場合があります。
       </p>
       <p className="mt-1 text-[11px] text-muted">
-        診断日時: <Num>{formatDateTimeSeconds(fetchedAt)}</Num> ／ 使用ツール: SEO Checker 無料 SEO・MEO・AIO 診断（サイト）v
+        診断日時: <Num>{formatDateTimeSeconds(fetchedAt)}</Num> ／ 使用ツール: {BRAND.name}（SEO・AIO 無料診断）v
         <Num>{version}</Num>（ルールベース）
       </p>
     </ReportSection>
@@ -193,7 +194,7 @@ export function NextSteps() {
   if (!name && !url) return null;
   return (
     <section className="print-card mt-8">
-      <div className="rounded-sm border border-line bg-surface p-4">
+      <div className="rounded-lg border border-line bg-surface p-4">
         <h2 className="text-[14px] font-bold text-ink">次のステップ</h2>
         <p className="mt-1 text-[13px] leading-relaxed text-ink">
           本レポートは無料診断版です。全ページの詳細診断や改善実装のご相談は下記まで。
@@ -206,7 +207,7 @@ export function NextSteps() {
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="rounded-md text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               {url}
             </a>

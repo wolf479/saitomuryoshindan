@@ -93,7 +93,7 @@ export function Pie({
                 <td className="py-0.5 pr-2">
                   <span
                     aria-hidden
-                    className="inline-block h-3 w-3 rounded-sm align-middle"
+                    className="inline-block h-3 w-3 rounded-lg align-middle"
                     style={{ backgroundColor: s.color }}
                   />
                 </td>

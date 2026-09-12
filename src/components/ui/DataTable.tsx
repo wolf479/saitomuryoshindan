@@ -123,7 +123,7 @@ export function DataTable<T>({
                     <button
                       type="button"
                       onClick={() => toggle(col)}
-                      className="inline-flex items-center gap-1 rounded-sm outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40"
+                      className="inline-flex items-center gap-1 rounded-md outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40"
                     >
                       {col.header}
                       <span aria-hidden className="text-[10px]">

@@ -52,7 +52,7 @@ export function ReportCover({
         <div className="shrink-0 text-center">
           <p className="text-[11px] text-on-brand-muted">総合評価</p>
           <p
-            className="mx-auto mt-1 flex h-14 w-14 items-center justify-center rounded-sm border-2 bg-panel text-[32px] leading-none font-bold tabular-nums"
+            className="mx-auto mt-1 flex h-14 w-14 items-center justify-center rounded-xl border-2 bg-panel text-[32px] leading-none font-bold tabular-nums"
             style={{ borderColor: grade.color, color: grade.color }}
           >
             {grade.grade}

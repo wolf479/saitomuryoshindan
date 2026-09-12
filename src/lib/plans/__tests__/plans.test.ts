@@ -75,13 +75,13 @@ describe("機能とプランの対応", () => {
   // 無料診断が有料になっていたら、見込み顧客の入口が塞がる
   it("無料診断と設定まわりは free のまま", () => {
     const free = features.filter((f) => f.plan === "free").map((f) => f.id);
-    expect(free.sort()).toEqual(["free", "free-meo", "plans", "settings"]);
+    expect(free.sort()).toEqual(["free", "plans", "settings"]);
   });
 
   // AI が成果物を作る機能は pro に置く（値付けの根拠）
   it("AI が成果物を作る機能は pro", () => {
     const pro = features.filter((f) => f.plan === "pro").map((f) => f.id).sort();
-    expect(pro).toEqual(["improvement", "listings", "llms-txt", "replies", "reviews", "writing"]);
+    expect(pro).toEqual(["improvement", "llms-txt", "writing"]);
   });
 
   it("残りは standard", () => {

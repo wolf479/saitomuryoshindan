@@ -12,11 +12,11 @@ import type { IntegrationKey } from "./integrations";
 export type FeatureGroupId = "free" | "diagnosis" | "measure" | "research" | "generate" | "settings";
 
 /**
- * サイドバーのタブ（利用者の指示: AIO / SEO / MEO で分ける）。
+ * サイドバーのタブ（SEO / AIO で分ける）。
  * group（診断 / 計測 / …）は「何をするか」、category は「何のための施策か」。
  * 設定・料金など共通のものは category を持たない（どのタブでも出す）。
  */
-export type FeatureCategoryId = "seo" | "aio" | "meo";
+export type FeatureCategoryId = "seo" | "aio";
 
 export interface FeatureCategory {
   id: FeatureCategoryId;
@@ -28,7 +28,6 @@ export interface FeatureCategory {
 export const FEATURE_CATEGORIES: readonly FeatureCategory[] = [
   { id: "seo", label: "SEO", description: "Google 検索で上位に出すための診断・計測・制作" },
   { id: "aio", label: "AIO", description: "AI Overviews や生成 AI に引用・言及されるための最適化" },
-  { id: "meo", label: "MEO", description: "Google マップ・ビジネス プロフィールの改善と競合比較" },
 ];
 
 export type FeatureStatus = "ready" | "beta";
@@ -90,8 +89,8 @@ export interface FeatureGroup {
   features: readonly Feature[];
 }
 
-/** 無料診断のまとめ名（サイドバーの見出し・ページタイトル） */
-export const FREE_SUITE_LABEL = "無料 SEO・MEO・AIO 診断";
+/** 無料診断のまとめ名（ヘッダーの見出し・ページタイトル） */
+export const FREE_SUITE_LABEL = "無料 SEO・AIO 診断";
 
 export const FREE_FEATURE: Feature = {
   id: "free",
@@ -112,32 +111,6 @@ export const FREE_FEATURE: Feature = {
   plan: "free",
   requires: [],
   optional: ["anthropic"],
-  group: "free",
-};
-
-/**
- * 無料 MEO 診断。店名で探して 1 店舗の公開情報を採点する（ログイン不要）。
- * 有料の /tools/maps との違い: 保存しない・競合なし・毎週の更新なし・AI 総評なし。
- * 実費（Places）が出るので API 側で回数制限をかける（src/lib/free/ratelimit.ts）。
- */
-export const FREE_MEO_FEATURE: Feature = {
-  id: "free-meo",
-  path: "/meo",
-  label: "無料 MEO 診断（Google マップの店舗）",
-  shortLabel: "店舗を診断（MEO）",
-  description:
-    "店名を入れるだけで、Google マップ上の店舗情報（ビジネス プロフィール）を基本情報・投稿・写真・レビューの 4 カテゴリで採点し、報告書として PDF 出力できます。ログイン不要。",
-  details: [
-    "店名・地域で検索して店舗を 1 件選ぶ",
-    "総合評価 A〜E と 4 カテゴリ・21 項目の判定、改善ヒント、総評（ルール生成）",
-    "口コミ情報（平均評価・件数・直近の口コミ・星の分布）",
-    "PDF ダウンロード。競合との比較・毎週の更新・AI 総評は有料プランで",
-  ],
-  featureIds: [],
-  icon: "map",
-  status: "beta",
-  plan: "free",
-  requires: ["places"],
   group: "free",
 };
 
@@ -292,53 +265,6 @@ const MEASURE: readonly Feature[] = [
     plan: "standard",
   },
   {
-    id: "maps",
-    path: "/tools/maps",
-    label: "Google マップ・店舗情報（MEO）",
-    shortLabel: "Google マップ",
-    description:
-      "Google マップ上の自社ビジネス プロフィールを、基本情報・投稿・写真・レビューの 4 カテゴリで採点した診断報告書（総評つき、PDF 出力）を作り、競合と並べて比較します。数字は毎週月曜 5:00 に一斉更新され、履歴として残ります。",
-    details: [
-      "店名・地域で検索して、自社の店舗と、その競合を最大 5 件ずつ登録する（複数店舗の管理に対応）",
-      "総合評価 A〜E と 4 カテゴリ（基本情報 / 投稿 / 写真 / レビュー）の採点、項目ごとの判定と改善ヒント",
-      "総評（ルール生成。ANTHROPIC_API_KEY があれば AI が執筆）と口コミ情報、PDF ダウンロード",
-      "毎週月曜 5:00 の一斉更新で数字を取り直し、履歴として保存。最新診断結果と前回との差分",
-      "評価・口コミ件数・写真・営業時間・電話・サイトの競合比較表",
-      "オーナー権限が要る項目（投稿・返信率など）は「未取得」として表示し、Business Profile 連携後に評価に含める",
-    ],
-    featureIds: [],
-    icon: "map",
-    status: "beta",
-    requires: ["places", "supabase"],
-    group: "measure",
-    category: "meo",
-    plan: "standard",
-  },
-  {
-    id: "reviews",
-    path: "/tools/reviews",
-    label: "口コミ支援（アンケート QR）",
-    shortLabel: "口コミ支援（アンケート）",
-    description:
-      "店内の QR コードから来店客がアンケートに答えると、回答をもとに AI が口コミの下書きを作り、来店客が自分で編集して Google マップに投稿できます。回答はすべて店舗に届き、低評価は先に店舗だけに知らされるので、口コミにならなかった不満も改善に活かせます。",
-    details: [
-      "業種別テンプレート（飲食 / サロン / クリニック）から質問を作り、並び替え・追加・編集する",
-      "AI 下書きのトーン（丁寧 / カジュアル / 親しみやすい）と、含めたい語（店名・看板メニュー）を設定",
-      "1 つのアンケートに店舗ごとの QR を紐づけて発行（MEO の登録店舗にまとめて発行も可）。テーブル別・スタッフ別にも分けられ、店舗・経路ごとの回答数を見る",
-      "回答・生成された下書き・投稿時の本文を時系列で確認。低評価は先頭に並べ、対応メモを記録",
-      "投稿ボタンの押下数・押下率（Google 側の実投稿数は取得できないため近似値）、経路別・週別の推移",
-      "回答の CSV 出力",
-    ],
-    featureIds: [],
-    icon: "qr",
-    status: "beta",
-    requires: ["supabase"],
-    optional: ["anthropic", "places"],
-    group: "measure",
-    category: "meo",
-    plan: "pro",
-  },
-  {
     id: "llmo",
     path: "/tools/llmo",
     label: "LLMO モニタリング・LLM リサーチ",
@@ -468,51 +394,6 @@ const GENERATE: readonly Feature[] = [
     plan: "pro",
   },
   {
-    id: "replies",
-    path: "/tools/replies",
-    label: "口コミへの返信（AI 返信案）",
-    shortLabel: "口コミへの返信",
-    description:
-      "Google マップの口コミに、AI が作った返信案を編集してそのまま投稿します。Google ビジネス プロフィールを接続すると全件の取得と投稿がこの画面で完結し、接続前でも公開情報の口コミから返信案を作ってコピーできます。",
-    details: [
-      "未返信の口コミを先頭に、評価・本文・既存の返信を一覧で確認",
-      "AI が返信案を作成（トーン、店舗からの補足、署名を設定）。低評価はお詫び → 事実確認 → 改善 → 個別連絡の型",
-      "編集してそのまま Google に投稿・返信の修正・削除（Google ビジネス プロフィール接続時）",
-      "接続前は Google マップの公開情報の口コミ（最新 5 件）で返信案を作り、コピーして Google の管理画面で返信",
-    ],
-    featureIds: [],
-    icon: "reply",
-    status: "beta",
-    requires: [],
-    optional: ["anthropic", "supabase", "places"],
-    group: "generate",
-    category: "meo",
-    plan: "pro",
-  },
-  {
-    id: "listings",
-    path: "/tools/listings",
-    label: "基本情報掲載（NAP 一括登録）",
-    shortLabel: "基本情報掲載",
-    description:
-      "店名・住所・電話・営業時間・説明文を 1 か所で決め、Google / Apple / Bing / Yahoo! など 30 の地図・検索・ディレクトリに同じ内容で載せます。無料で自分で登録できる媒体は登録画面へ直接進み、掲載状況を店舗ごとに管理します。",
-    details: [
-      "MEO の自社店舗ごとに基本情報（NAP）を決め、Google マップの公開情報から取り込み・表記ゆれを確認",
-      "無料で登録できる媒体（Google / Apple / Bing / Yahoo!プレイス / Foursquare / HERE / TomTom / Waze / OpenStreetMap ほか）の登録画面と手順、コピー用の基本情報",
-      "自動で流れる媒体（Siri・カーナビ各社・Navmii・Uber）と、配信代行（有料）でしか載らない媒体の区別",
-      "AI が説明文（短い 150 文字 / 長い 750 文字）を作成、サイトに貼る構造化データ（LocalBusiness）を生成",
-      "AIO への効果: ChatGPT（Bing）・Gemini（Google）・Copilot / Perplexity は複数の媒体で一致した基本情報を「実在する店」と認識して回答に含める。インバウンドは Apple マップ・Siri・Yelp・カーナビにも届く",
-    ],
-    featureIds: [],
-    icon: "broadcast",
-    status: "beta",
-    requires: ["supabase"],
-    optional: ["anthropic", "places"],
-    group: "generate",
-    category: "aio",
-    plan: "pro",
-  },
-  {
     id: "llms-txt",
     path: "/tools/llms-txt",
     label: "llms.txt 生成",
@@ -577,7 +458,7 @@ const SETTINGS: readonly Feature[] = [
 
 /** サイドバーに出す順で並べたグループ */
 export const FEATURE_GROUPS: readonly FeatureGroup[] = [
-  { id: "free", label: FREE_SUITE_LABEL, features: [FREE_FEATURE, FREE_MEO_FEATURE] },
+  { id: "free", label: FREE_SUITE_LABEL, features: [FREE_FEATURE] },
   { id: "diagnosis", label: "診断", features: DIAGNOSIS },
   { id: "measure", label: "計測", features: MEASURE },
   { id: "research", label: "調査", features: RESEARCH },

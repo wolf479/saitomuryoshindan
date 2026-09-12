@@ -43,7 +43,7 @@ export function InlineDiff({
         {!stats.changed && <span>{emptyText}</span>}
       </div>
       <div
-        className={`${maxHeightClass} overflow-y-auto rounded-sm border border-line bg-surface p-3 text-[13px] leading-relaxed whitespace-pre-wrap`}
+        className={`${maxHeightClass} overflow-y-auto rounded-lg border border-line bg-surface p-3 text-[13px] leading-relaxed whitespace-pre-wrap`}
       >
         {parts.map((part, i) => {
           if (part.op === "equal") return <span key={i}>{part.text}</span>;

@@ -1,5 +1,5 @@
 /**
- * サイドバーのタブ（SEO / AIO / MEO）の定義を固定するテスト。
+ * タブ（SEO / AIO）の定義を固定するテスト。
  * ツールがどのタブにも出ない（category の付け忘れ）と利用者から見えなくなる。
  */
 import { describe, expect, it } from "vitest";
@@ -12,9 +12,18 @@ import {
 } from "../registry";
 
 describe("タブの定義", () => {
-  it("SEO / AIO / MEO の 3 つ", () => {
-    expect(FEATURE_CATEGORIES.map((c) => c.id)).toEqual(["seo", "aio", "meo"]);
-    expect(findCategory("meo").label).toBe("MEO");
+  it("SEO / AIO の 2 つ", () => {
+    expect(FEATURE_CATEGORIES.map((c) => c.id)).toEqual(["seo", "aio"]);
+    expect(findCategory("seo").label).toBe("SEO");
+  });
+
+  it("MEO（Google マップ・店舗情報）は扱わない", () => {
+    expect(FEATURE_CATEGORIES.map((c) => c.id)).not.toContain("meo");
+    for (const f of TOOL_FEATURES) {
+      expect(f.requires, f.id).not.toContain("places");
+      expect(f.optional ?? [], f.id).not.toContain("places");
+    }
+    expect(TOOL_FEATURES.map((f) => f.id)).not.toContain("maps");
   });
 
   it("設定・料金以外のツールは必ずどれかのタブに属する", () => {
@@ -22,7 +31,7 @@ describe("タブの定義", () => {
       if (f.group === "settings") {
         expect(f.category, f.id).toBeUndefined();
       } else {
-        expect(["seo", "aio", "meo"], f.id).toContain(f.category);
+        expect(["seo", "aio"], f.id).toContain(f.category);
       }
     }
   });
@@ -39,21 +48,19 @@ describe("タブの定義", () => {
     }
   });
 
-  it("MEO タブは Google マップ、AIO タブに LLMO、SEO タブにサイト診断", () => {
-    const ids = (c: "seo" | "aio" | "meo") => groupsForSidebar(c).tools.flatMap((g) => g.features.map((f) => f.id));
-    expect(ids("meo")).toContain("maps");
-    expect(ids("meo")).not.toContain("site-audit");
+  it("AIO タブに LLMO、SEO タブにサイト診断", () => {
+    const ids = (c: "seo" | "aio") => groupsForSidebar(c).tools.flatMap((g) => g.features.map((f) => f.id));
     expect(ids("aio")).toContain("llmo");
     expect(ids("aio")).toContain("page-report");
+    expect(ids("aio")).not.toContain("site-audit");
     expect(ids("seo")).toContain("site-audit");
     expect(ids("seo")).toContain("rank");
   });
 
   it("パスからタブを引く。共通の画面と無料診断は null", () => {
-    expect(categoryForPath("/tools/maps")).toBe("meo");
-    expect(categoryForPath("/tools/maps/")).toBe("meo");
     expect(categoryForPath("/tools/llmo")).toBe("aio");
     expect(categoryForPath("/tools/site-audit")).toBe("seo");
+    expect(categoryForPath("/tools/site-audit/")).toBe("seo");
     expect(categoryForPath("/settings")).toBeNull();
     expect(categoryForPath("/")).toBeNull();
     expect(categoryForPath("/nowhere")).toBeNull();

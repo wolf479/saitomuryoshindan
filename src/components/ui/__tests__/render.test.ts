@@ -40,10 +40,12 @@ describe("Button / Card / Callout / EmptyState / Field / ProgressBar / Stat", ()
   });
   it("Card は白いシート + 番号付き h2", () => {
     const html = renderToStaticMarkup(createElement(Card, { title: "総合評価", number: 1, printCard: true }, "本文"));
+    // 画面では角丸 + ごく薄い影。印刷 / PDF では print-card 側で影と枠が外れる
     expect(html).toContain("print-card");
+    expect(html).toContain("rounded-xl");
+    expect(html).toContain("shadow-sm");
     expect(html).toContain("border-line");
     expect(html).toContain("1.");
-    expect(html).not.toContain("shadow");
   });
   it("Callout / EmptyState", () => {
     expect(renderToStaticMarkup(createElement(Callout, { tone: "fail", title: "失敗" }, "詳細"))).toContain('role="alert"');

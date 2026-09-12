@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -18,9 +17,9 @@ const SIZE: Record<ButtonSize, string> = {
   lg: "h-11 px-5 text-base gap-2",
 };
 
-/** ボタンのクラス列（Link や label に同じ見た目を付けたいとき用） */
-export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize = "md", extra = ""): string {
-  return `inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md font-bold outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT[variant]} ${SIZE[size]} ${extra}`;
+/** ボタンのクラス列 */
+function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize = "md", extra = ""): string {
+  return `inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-lg font-bold outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT[variant]} ${SIZE[size]} ${extra}`;
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -54,44 +53,6 @@ export function Button({
       {loading ? <Spinner /> : icon}
       {children}
     </button>
-  );
-}
-
-export interface ButtonLinkProps {
-  href: string;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  icon?: ReactNode;
-  className?: string;
-  children?: ReactNode;
-  /** 外部リンク（<a target=_blank>） */
-  external?: boolean;
-}
-
-/** リンクをボタンの見た目にする。内部は next/link、外部は <a> */
-export function ButtonLink({
-  href,
-  variant = "secondary",
-  size = "md",
-  icon,
-  className = "",
-  children,
-  external = false,
-}: ButtonLinkProps) {
-  const cls = buttonClass(variant, size, className);
-  if (external) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
-        {icon}
-        {children}
-      </a>
-    );
-  }
-  return (
-    <Link href={href} className={cls}>
-      {icon}
-      {children}
-    </Link>
   );
 }
 

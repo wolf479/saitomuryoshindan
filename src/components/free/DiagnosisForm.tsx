@@ -2,12 +2,12 @@
 
 /**
  * 診断フォーム（no-print）。レポートのシートとは独立したブロックとして上に置く。
+ * ヘッダー 1 カラムのレイアウトなので、ここが実質のヒーロー（最初に読む面）になる。
  * 範囲切替は segmented な 2 ボタン（role="radio"）。
  */
 import type { FormEvent } from "react";
 import { Button, Field, Input } from "@/components/ui";
-import { FREE_SUITE_LABEL } from "@/lib/features/registry";
-import { FreeTargetSwitch } from "./FreeTargetSwitch";
+import { BRAND } from "@/lib/brand";
 import { ServiceGuideButton } from "./ServiceGuideButton";
 
 export type Mode = "page" | "site";
@@ -23,6 +23,9 @@ const OPTIONS: { value: Mode; label: string; hint: string }[] = [
     hint: "sitemap と内部リンクから全ページを収集して診断します",
   },
 ];
+
+/** 「何が返ってくるか」を先に示す 3 点。入力前の不安を減らすためのもの */
+const PROMISES = ["総合スコアと A〜E グレード", "項目ごとの判定と改善提案", "報告書を PDF でダウンロード"];
 
 export function DiagnosisForm({
   url,
@@ -42,72 +45,88 @@ export function DiagnosisForm({
   error?: string | null;
 }) {
   return (
-    <section className="no-print mb-6 rounded-sm border border-line bg-panel p-5">
-      <h1 className="text-[20px] font-bold text-ink">{FREE_SUITE_LABEL}</h1>
-      <p className="mt-1 text-[13px] leading-relaxed text-muted">
-        URL を入力すると、検索エンジンと AI 検索（AIO）に読まれる土台をルールベースで採点し、報告書として出力します。ログインも API キーも不要です。
-      </p>
-      <FreeTargetSwitch current="site" />
+    <section className="no-print mb-8">
+      <div className="pt-8 pb-6 text-center sm:pt-12">
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-ink sm:text-[34px]">
+          サイトの健康状態を、
+          <wbr />
+          <span className="whitespace-nowrap text-accent">1 分で</span>
+        </h1>
+        <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-muted">
+          {BRAND.description}
+        </p>
+        <ul className="mt-4 flex flex-wrap justify-center gap-x-2 gap-y-2 text-[12px] font-bold text-muted">
+          {PROMISES.map((p) => (
+            <li key={p} className="rounded-full border border-line bg-panel px-3 py-1">
+              {p}
+            </li>
+          ))}
+        </ul>
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-4" noValidate>
-        <Field label="診断する URL" htmlFor="url" error={error}>
-          <Input
-            id="url"
-            type="text"
-            inputMode="url"
-            autoComplete="url"
-            placeholder="https://example.com/"
-            value={url}
-            invalid={Boolean(error)}
-            onChange={(e) => onUrlChange(e.target.value)}
-          />
-        </Field>
+      <div className="rounded-2xl border border-line bg-panel p-5 shadow-sm sm:p-6">
+        <form onSubmit={onSubmit} noValidate>
+          <Field label="診断する URL" htmlFor="url" error={error}>
+            <Input
+              id="url"
+              type="text"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="https://example.com/"
+              value={url}
+              invalid={Boolean(error)}
+              onChange={(e) => onUrlChange(e.target.value)}
+            />
+          </Field>
 
-        <div role="radiogroup" aria-label="診断の範囲" className="mt-3 grid gap-2 sm:grid-cols-2">
-          {OPTIONS.map((opt) => {
-            const selected = mode === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => onModeChange(opt.value)}
-                className={`rounded-md border px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
-                  selected ? "border-accent bg-accent-soft text-accent" : "border-line bg-panel text-ink hover:bg-surface"
-                }`}
-              >
-                <span className="block text-[13px] font-bold">{opt.label}</span>
-                <span className={`mt-0.5 block text-[11px] leading-relaxed ${selected ? "text-accent" : "text-muted"}`}>
-                  {opt.hint}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+          <div role="radiogroup" aria-label="診断の範囲" className="mt-3 grid gap-2 sm:grid-cols-2">
+            {OPTIONS.map((opt) => {
+              const selected = mode === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => onModeChange(opt.value)}
+                  className={`rounded-lg border px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                    selected
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-line bg-panel text-ink hover:bg-surface"
+                  }`}
+                >
+                  <span className="block text-[13px] font-bold">{opt.label}</span>
+                  <span className={`mt-0.5 block text-[11px] leading-relaxed ${selected ? "text-accent" : "text-muted"}`}>
+                    {opt.hint}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-        <Button type="submit" size="lg" loading={busy} className="mt-3 w-full">
-          診断する
-        </Button>
-      </form>
+          <Button type="submit" size="lg" loading={busy} className="mt-4 w-full">
+            無料で診断する
+          </Button>
+        </form>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-muted">
-        採点はルールベース（生成 AI 不使用）のため無料です。想定 FAQ の生成だけ AI を使います。
-      </p>
+        <p className="mt-3 text-center text-[11px] leading-relaxed text-muted">
+          採点はルールベース（生成 AI 不使用）のため無料です。想定 FAQ の生成だけ AI を使います。
+        </p>
+      </div>
 
-      <div className="mt-4 border-t border-line pt-4">
+      <div className="mt-5 text-center">
         <p className="text-[12px] leading-relaxed text-muted">
           診断でわかることや、有料プランで使えるツールの一覧をまとめた資料をご用意しています。
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           <ServiceGuideButton />
           {/* 公式サイト。別タブで開く（診断の入力内容を失わせない） */}
           <a
             href={SITE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[12px] text-accent underline underline-offset-2 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="rounded-md text-[12px] text-accent underline underline-offset-2 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-accent/40"
           >
             サービスの詳細は公式サイトへ
             <span aria-hidden="true"> ↗</span>

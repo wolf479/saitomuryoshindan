@@ -20,9 +20,6 @@
 # production
 /build
 
-# 無料診断の切り出し（scripts/extract-free.mjs の出力）
-/dist
-
 # misc
 .DS_Store
 *.pem
@@ -43,6 +40,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# cloudflare (marketing/)
-.wrangler/

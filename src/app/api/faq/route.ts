@@ -3,6 +3,16 @@ import { NextRequest } from "next/server";
 import { globalCache } from "@/lib/cache";
 import { generateFaqs, isFaqEnabled, MAX_INPUT_CHARS } from "@/lib/faq/generate";
 import type { FaqItem } from "@/lib/faq/schema";
+import {
+  CLIENT_LIMIT_MESSAGE,
+  clientKeyOf,
+  envInt,
+  FREE_FAQ_DAILY_DEFAULT,
+  FREE_FAQ_PER_HOUR,
+  FREE_LIMIT_MESSAGE,
+  takeClientToken,
+  takeDailyToken,
+} from "@/lib/free/ratelimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -43,6 +53,14 @@ export async function POST(request: NextRequest) {
   const cached = cache.get(key);
   if (cached) {
     return Response.json({ faqs: cached, cached: true });
+  }
+
+  // ここから先は Anthropic に実費が出る。キャッシュに当たった分は数えない
+  if (!takeClientToken("faq", clientKeyOf(request), FREE_FAQ_PER_HOUR)) {
+    return Response.json({ error: CLIENT_LIMIT_MESSAGE }, { status: 429 });
+  }
+  if (!takeDailyToken("faq", envInt("FREE_FAQ_DAILY_LIMIT", FREE_FAQ_DAILY_DEFAULT))) {
+    return Response.json({ error: FREE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   try {

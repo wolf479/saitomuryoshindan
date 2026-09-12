@@ -40,15 +40,6 @@ export function InfoCircle({ className = "" }: IconProps) {
   );
 }
 
-export function Book({ className = "" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
-      <path d="M3 5.5A1.5 1.5 0 0 1 4.5 4H10a2 2 0 0 1 2 2 2 2 0 0 1 2-2h5.5A1.5 1.5 0 0 1 21 5.5V18a1 1 0 0 1-1 1h-6a2 2 0 0 0-2 2 2 2 0 0 0-2-2H4a1 1 0 0 1-1-1V5.5Z" strokeLinejoin="round" />
-      <path d="M12 6v15" />
-    </svg>
-  );
-}
-
 export function Sparkle({ className = "" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
@@ -81,15 +72,6 @@ export function Printer({ className = "" }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
       <path d="M7 9V4h10v5M7 17H4v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6h-3" strokeLinejoin="round" />
       <path d="M7 14h10v6H7z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function Search({ className = "" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
-      <circle cx="11" cy="11" r="6" />
-      <path d="m20 20-4.2-4.2" strokeLinecap="round" />
     </svg>
   );
 }

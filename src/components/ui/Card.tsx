@@ -21,8 +21,9 @@ export interface CardProps {
 const PADDING = { none: "", sm: "p-4", md: "p-5 md:p-6" } as const;
 
 /**
- * 白いシート（bg-panel + 1px 罫線 + 角丸 2px、影なし）。
- * カードの入れ子はしない。サブブロックは `border border-line rounded-sm` か `bg-surface` の帯だけ。
+ * 白いシート（bg-panel + 1px 罫線 + 角丸 12px + ごく薄い影）。
+ * カードの入れ子はしない。サブブロックは `border border-line rounded-lg` か `bg-surface` の帯だけ。
+ * 影は print / PDF では .print-card 側で外れる。
  */
 export function Card({
   title,
@@ -42,7 +43,7 @@ export function Card({
   return (
     <Tag
       id={id}
-      className={`${printCard ? "print-card " : ""}rounded-sm border border-line bg-panel ${PADDING[padding]} ${className}`}
+      className={`${printCard ? "print-card " : ""}rounded-xl border border-line bg-panel shadow-sm ${PADDING[padding]} ${className}`}
     >
       {(title || actions) && (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -51,7 +52,7 @@ export function Card({
               <Heading
                 className={`flex items-center gap-3 text-ink ${headingLevel === 2 ? "text-lg" : "text-sm"} font-bold`}
               >
-                {headingLevel === 2 && <span className="h-5 w-1 shrink-0 bg-brand" aria-hidden />}
+                {headingLevel === 2 && <span className="h-5 w-1 shrink-0 rounded-full bg-accent" aria-hidden />}
                 {number !== undefined && <span className="tabular-nums">{number}.</span>}
                 <span>{title}</span>
               </Heading>

@@ -51,8 +51,3 @@ export function buildFaqHtml(faqs: FaqItem[], heading = "よくある質問"): s
 ${items}
 </section>`;
 }
-
-/** JSON-LD と HTML を 1 つにまとめた、コピペ用の完成形 */
-export function buildFaqSnippet(faqs: FaqItem[], heading?: string): string {
-  return `${buildFaqScriptTag(faqs)}\n\n${buildFaqHtml(faqs, heading)}`;
-}

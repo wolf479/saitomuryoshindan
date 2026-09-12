@@ -5,41 +5,45 @@
   値は hex リテラルで書く。src/lib/ui/palette.ts に同じ値の写しがあり、
   vitest（src/lib/ui/__tests__/palette.test.ts）が一致を検証する。
   紫（元ツール #5b4de0）系は定義しない。
+
+  ライト基調の SaaS トーン。ブランド色はロゴと同じネイビー、アクセントはティール。
+  chart-1〜6 はカテゴリ識別用で、色覚多様性を含む識別性を検証して選んである
+  （明度帯・彩度下限・隣接ペアの ΔE・地色とのコントラスト比をすべて満たす）。
 */
 @theme {
-  --color-surface: #eef1f4;
+  --color-surface: #f6f8f9;
   --color-panel: #ffffff;
-  --color-ink: #142230;
-  --color-muted: #56657a;
-  --color-line: #d3dbe2;
-  --color-brand: #0b3547;
+  --color-ink: #111c22;
+  --color-muted: #5a6a75;
+  --color-line: #e2e8ec;
+  --color-brand: #1b3a63;
   --color-on-brand: #ffffff;
-  --color-on-brand-muted: #b5c6d0;
-  --color-accent: #14607a;
-  --color-accent-strong: #0f4a5f;
-  --color-accent-soft: #e2eef3;
-  --color-secondary: #5b7080;
-  --color-pass: #1a7549;
-  --color-pass-soft: #e6f3eb;
-  --color-warn: #8f5a06;
-  --color-warn-soft: #f8eedc;
-  --color-fail: #b3261e;
-  --color-fail-soft: #f8e3e1;
-  --color-info: #3a6f9e;
-  --color-info-soft: #e6eef5;
-  --color-chart-1: #14607a;
-  --color-chart-2: #2b3f6b;
-  --color-chart-3: #4f8fa8;
-  --color-chart-4: #8c6d3f;
-  --color-chart-5: #6f7f92;
-  --color-chart-6: #a06f8c;
-  --color-chart-track: #e6ebef;
-  --color-chart-grid: #d3dbe2;
-  --color-grade-a: #176b45;
-  --color-grade-b: #2f7f47;
-  --color-grade-c: #8f5a06;
-  --color-grade-d: #b5541c;
-  --color-grade-e: #b3261e;
+  --color-on-brand-muted: #a9bcd4;
+  --color-accent: #00786d;
+  --color-accent-strong: #005f56;
+  --color-accent-soft: #e3f3f0;
+  --color-secondary: #5a6a75;
+  --color-pass: #15803d;
+  --color-pass-soft: #e7f5ec;
+  --color-warn: #a35a00;
+  --color-warn-soft: #fbf0df;
+  --color-fail: #b91c1c;
+  --color-fail-soft: #fbeaea;
+  --color-info: #1d4ed8;
+  --color-info-soft: #e8eefc;
+  --color-chart-1: #00897c;
+  --color-chart-2: #c2410c;
+  --color-chart-3: #2563eb;
+  --color-chart-4: #a21caf;
+  --color-chart-5: #65a30d;
+  --color-chart-6: #0891b2;
+  --color-chart-track: #eef2f4;
+  --color-chart-grid: #e2e8ec;
+  --color-grade-a: #0f7a43;
+  --color-grade-b: #3f7a33;
+  --color-grade-c: #a35a00;
+  --color-grade-d: #b4531b;
+  --color-grade-e: #b91c1c;
   --font-sans:
     "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
     "Meiryo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

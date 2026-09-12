@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
 export interface FieldProps {
   label: ReactNode;
@@ -36,7 +36,7 @@ export function Field({ label, htmlFor, hint, error, required, className = "", c
 }
 
 const BASE =
-  "w-full rounded-md border bg-panel px-3 text-base text-ink outline-none placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-lg border bg-panel px-3 text-base text-ink outline-none placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-60";
 
 function borderClass(invalid?: boolean): string {
   return invalid ? "border-fail" : "border-line";
@@ -50,29 +50,3 @@ export function Input({ invalid, className = "", ...rest }: InputProps) {
   return <input className={`${BASE} h-11 ${borderClass(invalid)} ${className}`} aria-invalid={invalid || undefined} {...rest} />;
 }
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  invalid?: boolean;
-}
-
-export function Select({ invalid, className = "", children, ...rest }: SelectProps) {
-  return (
-    <select className={`${BASE} h-11 ${borderClass(invalid)} ${className}`} aria-invalid={invalid || undefined} {...rest}>
-      {children}
-    </select>
-  );
-}
-
-export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  invalid?: boolean;
-}
-
-export function Textarea({ invalid, className = "", rows = 3, ...rest }: TextareaProps) {
-  return (
-    <textarea
-      rows={rows}
-      className={`${BASE} py-2 leading-relaxed ${borderClass(invalid)} ${className}`}
-      aria-invalid={invalid || undefined}
-      {...rest}
-    />
-  );
-}

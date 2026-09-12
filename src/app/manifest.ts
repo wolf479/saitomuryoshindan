@@ -1,23 +1,23 @@
 /**
  * PWA マニフェスト。ホーム画面に追加したときの名前とアイコンを決める。
  *
- * アイコンの元は src/app/icon.svg（サイドバーの LogoMark と同じ形）。
+ * アイコンの元は src/app/icon.svg（ヘッダーの LogoMark と同じ形）。
  * PNG は scripts/generate-icons.mjs で作り直せる。
  */
 import type { MetadataRoute } from "next";
+import { BRAND } from "@/lib/brand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SEO Checker | 無料 SEO・MEO・AIO 診断 と SEO/LLMO ツール",
-    short_name: "SEO Checker",
-    description:
-      "URL を入れるだけで AI 検索（AIO）対策の状況を診断し、報告書として PDF 出力できるツールです。",
+    name: `${BRAND.name} | ${BRAND.tagline}`,
+    short_name: BRAND.name,
+    description: BRAND.description,
     start_url: "/",
     display: "standalone",
     lang: "ja",
-    background_color: "#eef1f4",
-    // サイドバーと同じブランド色。アドレスバーの色もこれに合う
-    theme_color: "#0b3547",
+    background_color: "#f6f8f9",
+    // ロゴと同じネイビー。アドレスバーの色もこれに合う
+    theme_color: "#1b3a63",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

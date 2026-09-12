@@ -165,14 +165,14 @@ export function FaqSection({
           </p>
           <ul className="mt-3 space-y-3">
             {faqs.map((f) => (
-              <li key={f.id} className="rounded-sm border border-line p-3 @md:p-4">
+              <li key={f.id} className="rounded-lg border border-line p-3 @md:p-4">
                 <div className="no-print flex items-center justify-between">
                   <label className="inline-flex cursor-pointer items-center gap-2 text-[13px] text-muted">
                     <input
                       type="checkbox"
                       checked={f.approved}
                       onChange={(e) => update(f.id, { approved: e.target.checked })}
-                      className="h-4 w-4 rounded-sm border-line accent-accent"
+                      className="h-4 w-4 rounded-[3px] border-line accent-accent"
                     />
                     承認
                   </label>

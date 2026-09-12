@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { StatusIcon } from "@/components/Icons";
+import { StatusIcon } from "@/components/free/Icons";
 import type { Grade, StatusTone } from "@/lib/ui/palette";
 import { TONE_LABELS } from "@/lib/ui/palette";
 
@@ -8,7 +8,7 @@ import { TONE_LABELS } from "@/lib/ui/palette";
  * - pass / warn / fail / info: 判定ピル（12px のアイコン付き。色だけに頼らない）
  * - grade: グレード A〜E（枠と文字がグレード色、地は panel）
  * - free: 「無料」（accent）
- * - id: 機能 ID チップ（font-mono 10px、角丸 sm）
+ * - id: 機能 ID チップ（font-mono 10px、角丸 md）
  * - neutral: β / 準備中 / 要設定（muted、地は surface）
  */
 export type BadgeTone = StatusTone | "grade" | "free" | "id" | "neutral";
@@ -44,7 +44,7 @@ export interface BadgeProps {
 
 export function Badge({ tone = "neutral", grade, icon = true, children, className = "", title }: BadgeProps) {
   const isStatus = tone === "pass" || tone === "warn" || tone === "fail" || tone === "info";
-  const shape = tone === "id" ? "rounded-sm px-1 text-[10px]" : "rounded-full px-2 py-0.5 text-[11px]";
+  const shape = tone === "id" ? "rounded-md px-1.5 text-[10px]" : "rounded-full px-2 py-0.5 text-[11px]";
   const color = tone === "grade" ? `${GRADE_CLASS[grade ?? "E"]} bg-panel` : TONE_CLASS[tone];
   const label = children ?? (isStatus ? TONE_LABELS[tone] : grade);
   return (

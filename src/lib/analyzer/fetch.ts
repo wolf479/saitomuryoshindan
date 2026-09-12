@@ -2,7 +2,7 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
 export const USER_AGENT =
-  "Mozilla/5.0 (compatible; SEOChecker/0.1; +https://github.com/wolf-ookami/seo-checker)";
+  "Mozilla/5.0 (compatible; SiteKenshin/0.1; +https://github.com/wolf479/saitomuryoshindan)";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const MAX_BYTES = 3 * 1024 * 1024; // 3MB

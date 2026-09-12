@@ -78,7 +78,7 @@ export function ServiceGuide({ contactName, contactUrl, issuedOn }: ServiceGuide
               ["見出し", "15"],
               ["コンテンツ", "20"],
             ].map(([label, weight]) => (
-              <div key={label} className="rounded-sm border border-line bg-panel p-2">
+              <div key={label} className="rounded-lg border border-line bg-panel p-2">
                 <div className="text-[18px] font-bold tabular-nums">{weight}</div>
                 <div className="mt-0.5 text-[10px] leading-tight text-muted">{label}</div>
               </div>
@@ -95,7 +95,7 @@ export function ServiceGuide({ contactName, contactUrl, issuedOn }: ServiceGuide
           <h2 className="border-l-4 border-brand pl-3 text-[18px] font-bold">料金プラン</h2>
           <div className="mt-3 grid grid-cols-3 gap-3">
             {SELLABLE_PLANS.map((plan) => (
-              <div key={plan.id} className="rounded-sm border border-line bg-panel p-3">
+              <div key={plan.id} className="rounded-lg border border-line bg-panel p-3">
                 <div className="text-[13px] font-bold">{plan.label}</div>
                 <div className="mt-1 text-[16px] font-bold tabular-nums">
                   {planPriceLabel(plan.id)}
@@ -125,7 +125,7 @@ export function ServiceGuide({ contactName, contactUrl, issuedOn }: ServiceGuide
                   {group.features.map((f) => (
                     <li key={f.id} className="text-[12px] leading-relaxed">
                       <span className="font-bold">{f.shortLabel}</span>
-                      <span className="ml-1.5 rounded-sm border border-line px-1 text-[10px] text-muted">
+                      <span className="ml-1.5 rounded-md border border-line px-1 text-[10px] text-muted">
                         {planShortLabel(f.plan)}
                       </span>
                       <br />
@@ -157,7 +157,7 @@ export function ServiceGuide({ contactName, contactUrl, issuedOn }: ServiceGuide
         </section>
 
         {/* 正直に書く */}
-        <section className="rounded-sm border border-line bg-panel p-4">
+        <section className="rounded-lg border border-line bg-panel p-4">
           <h2 className="text-[14px] font-bold">この診断でわかること・わからないこと</h2>
           <div className="mt-2 grid grid-cols-2 gap-4 text-[12px] leading-relaxed">
             <div>
@@ -185,7 +185,7 @@ export function ServiceGuide({ contactName, contactUrl, issuedOn }: ServiceGuide
 
         {/* 連絡先 */}
         {(contactName || contactUrl) && (
-          <section className="rounded-sm border border-brand bg-accent-soft p-4">
+          <section className="rounded-lg border border-brand bg-accent-soft p-4">
             <h2 className="text-[14px] font-bold">お問い合わせ</h2>
             <p className="mt-1 text-[13px] leading-relaxed">
               導入のご相談、無料診断の結果についてのご質問は下記まで。

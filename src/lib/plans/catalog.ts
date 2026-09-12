@@ -90,10 +90,6 @@ export const PLAN_BY_ID: Record<PlanId, Plan> = Object.fromEntries(
   PLANS.map((p) => [p.id, p]),
 ) as Record<PlanId, Plan>;
 
-export function planLabel(id: PlanId): string {
-  return PLAN_BY_ID[id].label;
-}
-
 /** 短い表示（鍵バッジ用。「無料」「有料」） */
 export function planShortLabel(id: PlanId): string {
   return PLAN_BY_ID[id].shortLabel;

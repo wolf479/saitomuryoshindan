@@ -7,8 +7,7 @@ import { HBar } from "../HBar";
 import { HeatCell, heatCellClass, heatCellColors } from "../HeatCell";
 import { Histogram } from "../Histogram";
 import { Pie } from "../Pie";
-import { Sparkline } from "../Sparkline";
-import { SegmentBar, StackedBar } from "../StackedBar";
+import { SegmentBar } from "../SegmentBar";
 
 /** チャートのハードルール（ui-notes §2）: 数値の width/height + viewBox、hex 直書き、var() 無し */
 function expectSvgRules(html: string) {
@@ -117,21 +116,7 @@ describe("Histogram", () => {
   });
 });
 
-describe("StackedBar / SegmentBar", () => {
-  it("積み上げ縦棒", () => {
-    const html = renderToStaticMarkup(
-      createElement(StackedBar, {
-        categories: ["9/1", "9/2", "9/3"],
-        series: [
-          { label: "自社のみ", color: palette.chart[0], values: [3, 4, 5] },
-          { label: "競合のみ", color: palette.chart[1], values: [1, 0, 2] },
-        ],
-      }),
-    );
-    expectSvgRules(html);
-    expect(html.match(/<rect /g)).toHaveLength(5);
-    expect(html).toContain("自社のみ");
-  });
+describe("SegmentBar", () => {
   it("1 本の区分棒 400×12（x が積算される）", () => {
     const html = renderToStaticMarkup(
       createElement(SegmentBar, {
@@ -151,14 +136,7 @@ describe("StackedBar / SegmentBar", () => {
   });
 });
 
-describe("Sparkline / HeatCell", () => {
-  it("120×28、末尾の丸", () => {
-    const html = renderToStaticMarkup(createElement(Sparkline, { values: [3, 5, 4, 8] }));
-    expectSvgRules(html);
-    expect(html).toContain("<polyline");
-    expect(html).toContain('r="2"');
-    expect(renderToStaticMarkup(createElement(Sparkline, { values: [] }))).toContain("—");
-  });
+describe("HeatCell", () => {
   it("HeatCell は判定の地色 + 数値", () => {
     expect(heatCellClass(85)).toBe("bg-pass-soft");
     expect(heatCellClass(60)).toBe("bg-warn-soft");

@@ -71,13 +71,14 @@ function overallOf(categories: CategoryScore[]): number {
 
 function mkPage(checks: CheckResult[]): AnalysisResult {
   const categories = mkCategories(checks);
-  return { page: SNAPSHOT, overall: overallOf(categories), categories, notes: [] };
+  return { page: SNAPSHOT, exclusion: null, overall: overallOf(categories), categories, notes: [] };
 }
 
 /** 総合スコアだけを指定したページ結果（グレード閾値の検証用） */
 function pageWithOverall(overall: number): AnalysisResult {
   return {
     page: SNAPSHOT,
+    exclusion: null,
     overall,
     categories: mkCategories([mkCheck("title", "meta", "pass", 3)]),
     notes: [],
@@ -149,6 +150,7 @@ function mkSite(
     entryUrl: pages[0]?.url ?? "https://example.com/",
     origin: "https://example.com",
     pages,
+    excluded: [],
     failures: [],
     overall,
     categories: mkSiteCategories(pages),
@@ -160,6 +162,7 @@ function mkSite(
       analyzed: pages.length,
       failed: 0,
       skipped: 0,
+      excluded: 0,
       durationMs: 12_000,
       truncated: null,
       sitemapCount: pages.length,
@@ -359,7 +362,7 @@ describe("buildPageSummary", () => {
   });
 
   it("端ケース: カテゴリが空でも落ちない", () => {
-    const s = buildPageSummary({ page: SNAPSHOT, overall: 0, categories: [], notes: [] });
+    const s = buildPageSummary({ page: SNAPSHOT, exclusion: null, overall: 0, categories: [], notes: [] });
     expect(s.categories).toEqual([]);
     expect(s.best.id).toBe(CATEGORY_ORDER[0]);
     expect(s.worst.score).toBe(0);

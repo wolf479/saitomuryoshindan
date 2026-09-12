@@ -48,7 +48,7 @@ npm run dev                  # http://localhost:3000
 4. **ページ × カテゴリ 一覧** — スコアで色分けしたヒートテーブル（低い順）※サイト全体モードのみ
 5. **改善提案** — 全ページ共通の問題 / ページによって差がある項目
 6. **想定 FAQ** — 本文から AI が下書きし、承認したものを FAQPage の JSON-LD と HTML に変換 ※ページモードのみ
-7. **付録** — 診断ページ一覧、配点と判定基準、クロール統計
+7. **付録** — 診断ページ一覧、採点から外したページ、配点と判定基準、クロール統計
 
 講評と優先度は `src/lib/report/summary.ts` の純関数で導出しています（生成 AI 不使用）。
 
@@ -56,11 +56,13 @@ npm run dev                  # http://localhost:3000
 
 | カテゴリ | 重み | 見るもの |
 |---|---|---|
-| AI クローラ可否 | 20 | robots.txt での**検索用**クローラ（OAI-SearchBot / PerplexityBot / Claude-SearchBot など）の可否、noindex |
-| 構造化データ | 25 | JSON-LD の有無と文法、Organization / BreadcrumbList / sameAs、WebSite（トップのみ）、FAQPage（FAQ のあるページのみ） |
+| AI クローラ可否 | 20 | robots.txt での**検索用**クローラ（OAI-SearchBot / PerplexityBot / Claude-SearchBot など）の可否、noindex（サイト内検索の結果・カート・送信完了など、索引に載せないのが通例のページは対象外） |
+| 構造化データ | 25 | JSON-LD の有無と文法、Organization / sameAs、BreadcrumbList（下層ページのみ）、WebSite（トップのみ）、FAQPage（FAQ のあるページのみ） |
 | メタ情報 | 20 | title、meta description（長さ）、OGP、canonical、lang |
 | 見出し | 15 | h1 がちょうど 1 つか、h2 / h3 の階層が飛んでいないか |
 | コンテンツ | 20 | 具体的な情報（数値・日付・組織名・連絡先）の含有、見出しに本文が伴うか、画像の alt、JS 描画依存（SPA）の疑い |
+
+**もともと検索に載せないページは採点しません。** サイト内検索の結果・カート・ログイン・送信完了・印刷用ページなどを noindex や robots.txt で止めるのは正しい運用で、説明文や本文が無くても問題になりません。これらを採点に混ぜると直しようのない減点でサイト全体の平均だけが下がるため、URL の形（`/search`、`?s=…`、`/cart`、`/thanks` など）で判別して採点から外し、付録 A に参考として一覧します。判別は URL だけを見るので、方針で分かれるページ（記事一覧・タグページなど）は外しません。robots.txt がサイト全体を止めている場合も、サイトの問題として今まで通り減点します。
 
 各項目は pass（満点）/ warn（半分）/ fail（0 点）で採点し、info は採点対象外です。配点は `src/lib/analyzer/types.ts` の `CATEGORY_WEIGHTS` と各 `check({ weight })` で変えられます。
 

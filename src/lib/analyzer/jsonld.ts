@@ -245,17 +245,27 @@ export function checkStructuredData($: cheerio.CheerioAPI, pageUrl: string): Che
     }),
   );
 
+  // パンくずは「そのページが上位のどこにぶら下がっているか」を示すもの。
+  // トップページは最上位で上位階層が無く、「ホーム」1 件だけの BreadcrumbList は
+  // 位置を何も伝えない（Google も現在のページに至る経路を示すものとしている）。
+  // WebSite の裏返しで、トップページでは「該当なし」として pass にする。
+  const hasBreadcrumb = has("BreadcrumbList");
   results.push(
     check({
       id: "jsonld-breadcrumb",
       category: "structuredData",
-      status: has("BreadcrumbList") ? "pass" : "warn",
+      status: home || hasBreadcrumb ? "pass" : "warn",
       weight: 1,
-      label: has("BreadcrumbList")
-        ? "パンくず(BreadcrumbList)構造化データがある"
-        : "パンくず(BreadcrumbList)構造化データがない",
+      label: home
+        ? "トップページのためパンくず(BreadcrumbList)は不要"
+        : hasBreadcrumb
+          ? "パンくず(BreadcrumbList)構造化データがある"
+          : "パンくず(BreadcrumbList)構造化データがない",
+      evidence: home
+        ? "トップページは最上位で上位階層が無いため、この項目は対象外です"
+        : undefined,
       advice:
-        "BreadcrumbList は、このページがサイトのどの階層にあるかを伝えます。トップ > サービス > 詳細 のような位置関係が AI に伝わり、ページの文脈を理解しやすくなります。",
+        "BreadcrumbList は、このページがサイトのどの階層にあるかを伝えます。トップ > サービス > 詳細 のような位置関係が AI に伝わり、ページの文脈を理解しやすくなります。トップページは最上位のため不要です。",
     }),
   );
 

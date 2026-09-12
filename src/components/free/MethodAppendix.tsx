@@ -167,7 +167,12 @@ export function MethodAppendix({
         </li>
         <li>
           根拠が確立していない項目（llms.txt の有無など）と、そのページに当てはまらない項目（FAQ の無いページの FAQPage、下層ページの
-          WebSite など）は<strong className="font-bold">採点していません</strong>。本文も文字数ではなく、具体的な事実が書かれているかで判定します。
+          WebSite、トップページのパンくずなど）は<strong className="font-bold">採点していません</strong>。本文も文字数ではなく、具体的な事実が書かれているかで判定します。
+        </li>
+        <li>
+          サイト内検索の結果・カート・送信完了など、
+          <strong className="font-bold">もともと検索に載せないページ</strong>
+          （noindex や robots.txt でそのページだけを止めているもの）は、ページごと採点から外しています。説明文や本文が無くても問題にならないページで、平均点を下げるだけだからです。診断はしているので、付録 A に参考として一覧します。
         </li>
         <li>
           実際の成果は、Search Console の表示回数・検索語・インデックス状況、問い合わせなどの転換、主要 AI サービスからの参照、Core Web

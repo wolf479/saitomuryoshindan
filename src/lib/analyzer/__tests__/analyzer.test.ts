@@ -5,7 +5,7 @@ import { normalizeUrl } from "../fetch";
 import { checkHeadings, findLevelSkips } from "../headings";
 import { checkStructuredData, extractJsonLd } from "../jsonld";
 import { checkMeta } from "../meta";
-import { evaluateRobots } from "../robots";
+import { checkCrawlers, evaluateRobots, inspectCrawlers, type SiteFiles } from "../robots";
 import { buildCategories, overallScore, scoreCategory } from "../scoring";
 import { check, optionalCheck } from "../check";
 import { extractSitemaps } from "../robots";
@@ -57,6 +57,120 @@ describe("evaluateRobots", () => {
     const txt = "User-agent: *\nDisallow: /admin/";
     const r = evaluateRobots(txt, pageUrl, robotsUrl);
     expect(r.blocked).toEqual([]);
+  });
+});
+
+const SITE_FILES: SiteFiles = {
+  origin: "https://example.com",
+  robotsTxt: "User-agent: *\nAllow: /\n",
+  sitemaps: [],
+  llmsTxt: { present: false, length: 0, status: 404 },
+  llmsFullTxt: { present: false, length: 0 },
+};
+const NOINDEX = '<html><head><meta name="robots" content="noindex,follow"></head><body></body></html>';
+
+const withRobots = (robotsTxt: string): SiteFiles => ({ ...SITE_FILES, robotsTxt });
+
+const stateOf = (url: string, html = NOINDEX, files = SITE_FILES, headers = new Headers()) => {
+  const pageUrl = new URL(url);
+  return inspectCrawlers(pageUrl, cheerio.load(html), headers, files);
+};
+
+const crawlerChecks = (url: string, html = NOINDEX, files = SITE_FILES, headers = new Headers()) => {
+  const pageUrl = new URL(url);
+  const checks = checkCrawlers(pageUrl, stateOf(url, html, files, headers), files);
+  return Object.fromEntries(checks.map((c) => [c.id, c]));
+};
+
+describe("noindex の採点", () => {
+  const noindexOf = (url: string, html = NOINDEX, headers = new Headers()) =>
+    crawlerChecks(url, html, SITE_FILES, headers)["noindex"];
+
+  it("公開ページの noindex は未対応（配点 2）", () => {
+    const c = noindexOf("https://example.com/company");
+    expect(c.status).toBe("fail");
+    expect(c.weight).toBe(2);
+    expect(c.advice).toBeDefined();
+  });
+
+  it("X-Robots-Tag の noindex も拾う", () => {
+    const c = noindexOf(
+      "https://example.com/company",
+      "<html><body></body></html>",
+      new Headers({ "x-robots-tag": "noindex" }),
+    );
+    expect(c.status).toBe("fail");
+  });
+
+  // 検索結果・カート・送信完了などの noindex は意図した正しい設定。
+  // 減点すると「外してください」という誤った助言になるので対象外にする
+  it.each([
+    ["https://example.com/search", "サイト内検索"],
+    ["https://example.com/?s=%E6%96%99%E9%87%91", "サイト内検索"],
+    ["https://example.com/catalogsearch/result/?q=shoes", "サイト内検索"],
+    ["https://example.com/search.php", "サイト内検索"],
+    ["https://example.com/cart", "カート"],
+    ["https://example.com/contact/thanks", "確認・完了"],
+    ["https://example.com/mypage/order", "ログイン"],
+    ["https://example.com/news/1?print=1", "印刷"],
+  ])("%s の noindex は減点しない", (url, kind) => {
+    const c = noindexOf(url);
+    expect(c.status).toBe("pass");
+    // 配点（カテゴリの分母）はページ間で揃えたまま、減点だけを外す
+    expect(c.weight).toBe(2);
+    expect(c.earned).toBe(2);
+    expect(c.label).toContain(kind);
+    expect(c.evidence).toContain("対象外");
+    expect(c.advice).toBeUndefined();
+  });
+
+  it("検索語の無い ?s= は検索結果とみなさない", () => {
+    expect(noindexOf("https://example.com/?s=").status).toBe("fail");
+  });
+
+  it("noindex が無ければ根拠を出さずに pass", () => {
+    const c = noindexOf("https://example.com/search", "<html><body></body></html>");
+    expect(c.status).toBe("pass");
+    expect(c.evidence).toBeUndefined();
+  });
+});
+
+// もともと検索に載せないページは、採点しても直しようのない減点が並ぶだけなので
+// サイト診断の集計から外す（付録に参考として残す）
+describe("inspectCrawlers（採点対象にするかの判断）", () => {
+  it("検索結果ページの noindex は採点対象から外す", () => {
+    const { exclusion } = stateOf("https://example.com/search");
+    expect(exclusion?.kind).toContain("サイト内検索");
+    expect(exclusion?.by).toEqual(["noindex"]);
+  });
+
+  it("公開ページの noindex では外さない（設定ミスかもしれないため）", () => {
+    expect(stateOf("https://example.com/company").exclusion).toBeNull();
+  });
+
+  it("noindex も robots.txt の拒否も無ければ外さない", () => {
+    expect(stateOf("https://example.com/search", "<html><body></body></html>").exclusion).toBeNull();
+  });
+
+  it("このページだけ止める robots.txt でも外す", () => {
+    const html = "<html><body></body></html>";
+    const files = withRobots("User-agent: *\nDisallow: /search\n");
+    expect(stateOf("https://example.com/search", html, files).exclusion?.by).toEqual(["robots"]);
+    // 意図した拒否なので、クローラ可否の項目も減点しない
+    const byId = crawlerChecks("https://example.com/search", html, files);
+    expect(byId["ai-crawlers-allowed"].status).toBe("pass");
+    expect(byId["ai-crawlers-allowed"].label).toContain("サイト内検索");
+    expect(byId["ai-crawlers-allowed"].evidence).toContain("対象外");
+  });
+
+  // サイト全体を止めているなら、それは検索結果ページの都合ではなくサイトの問題
+  it("サイト全体を止める robots.txt では外さず、今まで通り減点する", () => {
+    const html = "<html><body></body></html>";
+    const files = withRobots("User-agent: *\nDisallow: /\n");
+    expect(stateOf("https://example.com/search", html, files).exclusion).toBeNull();
+    expect(crawlerChecks("https://example.com/search", html, files)["ai-crawlers-allowed"].status).toBe(
+      "fail",
+    );
   });
 });
 
@@ -145,6 +259,21 @@ describe("checkStructuredData", () => {
     const byId = run("<html><body></body></html>", "https://example.com/");
     expect(byId["jsonld-website"].status).toBe("warn");
     expect(byId["jsonld-website"].weight).toBe(1);
+  });
+
+  // パンくずは上位階層への経路を示すもの。最上位のトップページには示す位置が無い
+  it("トップページではパンくずの不在を減点しない", () => {
+    const byId = run("<html><body></body></html>", "https://example.com/index.html");
+    expect(byId["jsonld-breadcrumb"].status).toBe("pass");
+    expect(byId["jsonld-breadcrumb"].weight).toBe(1);
+    expect(byId["jsonld-breadcrumb"].label).toContain("トップページのため");
+    expect(byId["jsonld-breadcrumb"].advice).toBeUndefined();
+  });
+
+  it("下層ページではパンくずが無いと warn", () => {
+    const byId = run("<html><body></body></html>", "https://example.com/company/");
+    expect(byId["jsonld-breadcrumb"].status).toBe("warn");
+    expect(byId["jsonld-breadcrumb"].weight).toBe(1);
   });
 });
 
@@ -444,6 +573,7 @@ function fakeAnalysis(
         h1Count: 1,
         fetchedAt: "2026-01-01T00:00:00.000Z",
       },
+      exclusion: null,
       overall: 0,
       categories: buildCategories(built),
       notes: [],

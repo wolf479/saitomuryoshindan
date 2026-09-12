@@ -1,13 +1,14 @@
 /**
  * 付録 A。
  * - page: 診断対象ページの情報（§3.2 付録 A）
- * - site: 診断ページ一覧・診断できなかったページ・クロール統計（§3.3 付録 A）
+ * - site: 診断ページ一覧・採点から外したページ・診断できなかったページ・クロール統計（§3.3 付録 A）
  */
 import { DataTable, type Column } from "@/components/ui";
 import type {
   AnalysisResult,
   SiteAnalysisResult,
   SiteCrawlStats,
+  SiteExcludedPage,
   SitePageFailure,
 } from "@/lib/analyzer/types";
 import { fmt, formatDuration, pathOf, type SiteReportSummary } from "@/lib/report";
@@ -59,6 +60,25 @@ const FAILURE_COLUMNS: Column<SitePageFailure>[] = [
   { key: "message", header: "理由", render: (row) => <span className="text-muted">{row.message}</span> },
 ];
 
+/** 「サイト内検索の結果ページ（noindex）」 */
+function exclusionLabel(row: SiteExcludedPage): string {
+  const by = row.by.map((signal) => (signal === "noindex" ? "noindex" : "robots.txt")).join("・");
+  return `${row.kind}（${by}）`;
+}
+
+const EXCLUDED_COLUMNS: Column<SiteExcludedPage>[] = [
+  {
+    key: "url",
+    header: "URL",
+    render: (row) => <span className="break-all">{pathOf(row.url)}</span>,
+  },
+  {
+    key: "kind",
+    header: "種類",
+    render: (row) => <span className="text-muted">{exclusionLabel(row)}</span>,
+  },
+];
+
 function truncationLabel(crawl: SiteCrawlStats): string {
   if (!crawl.truncated) return "打ち切りなし（見つかったページをすべて診断しました）";
   return crawl.truncated.reason === "max-pages"
@@ -93,6 +113,26 @@ export function SiteAppendix({
         ))}
       </dl>
 
+      {result.excluded.length > 0 && (
+        <>
+          <SubHeading note={`${fmt(result.excluded.length)} ページ`}>
+            採点から外したページ（参考）
+          </SubHeading>
+          <p className="mb-2 text-[12px] leading-relaxed text-muted">
+            サイト内検索の結果やカートなど、もともと検索結果に出さないページです。title や本文が
+            無くても問題にならないため、平均点とページ一覧には含めていません。
+          </p>
+          <DataTable
+            rows={result.excluded}
+            columns={EXCLUDED_COLUMNS}
+            rowKey={(row) => row.url}
+            dense
+            stickyHeader={false}
+            minWidth="24rem"
+          />
+        </>
+      )}
+
       <SubHeading>診断できなかったページ</SubHeading>
       {result.failures.length === 0 ? (
         <EmptyLine>取得・診断に失敗したページはありません。</EmptyLine>
@@ -121,6 +161,11 @@ export function SiteAppendix({
         </KeyValue>
         <KeyValue term="診断できたページ">
           <Num>{fmt(crawl.analyzed)}</Num> 件
+          {crawl.excluded > 0 && (
+            <>
+              （採点対象外 <Num>{fmt(crawl.excluded)}</Num> 件）
+            </>
+          )}
         </KeyValue>
         <KeyValue term="診断できなかったページ">
           <Num>{fmt(crawl.failed)}</Num> 件

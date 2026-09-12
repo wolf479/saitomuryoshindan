@@ -3,7 +3,9 @@
  * ここが崩れると「有料機能が無料で使える」か「契約者が使えない」のどちらかになる。
  */
 import { describe, expect, it } from "vitest";
-import { features, FEATURE_GROUPS } from "@/lib/features/registry";
+import { FEATURE_GROUPS, type Feature } from "@/lib/features/registry";
+
+const features: Feature[] = FEATURE_GROUPS.flatMap((g) => [...g.features]);
 import {
   PLANS,
   PLAN_BY_ID,

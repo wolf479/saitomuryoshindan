@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
 export interface FieldProps {
   label: ReactNode;
@@ -50,29 +50,3 @@ export function Input({ invalid, className = "", ...rest }: InputProps) {
   return <input className={`${BASE} h-11 ${borderClass(invalid)} ${className}`} aria-invalid={invalid || undefined} {...rest} />;
 }
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  invalid?: boolean;
-}
-
-export function Select({ invalid, className = "", children, ...rest }: SelectProps) {
-  return (
-    <select className={`${BASE} h-11 ${borderClass(invalid)} ${className}`} aria-invalid={invalid || undefined} {...rest}>
-      {children}
-    </select>
-  );
-}
-
-export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  invalid?: boolean;
-}
-
-export function Textarea({ invalid, className = "", rows = 3, ...rest }: TextareaProps) {
-  return (
-    <textarea
-      rows={rows}
-      className={`${BASE} py-2 leading-relaxed ${borderClass(invalid)} ${className}`}
-      aria-invalid={invalid || undefined}
-      {...rest}
-    />
-  );
-}

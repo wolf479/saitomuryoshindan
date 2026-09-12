@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import { MAIN_APP_URL } from "@/lib/main-app";
-import { LogoMark } from "./icons";
+import { LogoMark } from "./LogoMark";
 
 /**
  * 全ページ共通のヘッダー。機能が 1 本なのでナビゲーションは持たず、

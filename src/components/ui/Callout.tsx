@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { StatusIcon } from "@/components/Icons";
+import { StatusIcon } from "@/components/free/Icons";
 import type { StatusTone } from "@/lib/ui/palette";
 
 export interface CalloutProps {

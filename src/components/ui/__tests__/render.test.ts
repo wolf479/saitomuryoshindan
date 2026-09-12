@@ -6,11 +6,9 @@ import { Button } from "../Button";
 import { Callout } from "../Callout";
 import { Card } from "../Card";
 import { DataTable, type Column } from "../DataTable";
-import { EmptyState } from "../EmptyState";
 import { Field, Input } from "../Field";
 import { ProgressBar } from "../ProgressBar";
-import { StatCard, StatStrip } from "../StatCard";
-import { Tabs } from "../Tabs";
+import { StatStrip } from "../StatStrip";
 
 describe("Badge", () => {
   it("判定ピルは枠線 + アイコン + 文言", () => {
@@ -30,7 +28,7 @@ describe("Badge", () => {
   });
 });
 
-describe("Button / Card / Callout / EmptyState / Field / ProgressBar / Stat", () => {
+describe("Button / Card / Callout / Field / ProgressBar / Stat", () => {
   it("Button の variant と loading", () => {
     const html = renderToStaticMarkup(createElement(Button, { variant: "danger", loading: true }, "削除"));
     expect(html).toContain("border-fail");
@@ -47,9 +45,8 @@ describe("Button / Card / Callout / EmptyState / Field / ProgressBar / Stat", ()
     expect(html).toContain("border-line");
     expect(html).toContain("1.");
   });
-  it("Callout / EmptyState", () => {
+  it("Callout", () => {
     expect(renderToStaticMarkup(createElement(Callout, { tone: "fail", title: "失敗" }, "詳細"))).toContain('role="alert"');
-    expect(renderToStaticMarkup(createElement(EmptyState, { title: "なし" }))).toContain("なし");
   });
   it("Field は label の for と error", () => {
     // FieldProps は children を必須にしているため、createElement の第 3 引数ではなく
@@ -74,18 +71,13 @@ describe("Button / Card / Callout / EmptyState / Field / ProgressBar / Stat", ()
     expect(html).toContain("width:9.375%");
     expect(renderToStaticMarkup(createElement(ProgressBar, { indeterminate: true }))).toContain("progress-indeterminate");
   });
-  it("StatCard の delta と StatStrip", () => {
-    const up = renderToStaticMarkup(createElement(StatCard, { label: "セッション", value: 1200, delta: { value: 5.5, unit: "%" } }));
-    expect(up).toContain("+5.5%");
-    expect(up).toContain("text-pass");
-    const down = renderToStaticMarkup(createElement(StatCard, { label: "直帰率", value: 40, delta: { value: 3, positiveIsGood: false } }));
-    expect(down).toContain("text-fail");
+  it("StatStrip", () => {
     const strip = renderToStaticMarkup(createElement(StatStrip, { items: [{ label: "診断項目", value: 24 }, { label: "合格", value: 12 }] }));
     expect(strip).toContain("grid-cols-2");
   });
 });
 
-describe("DataTable / Tabs", () => {
+describe("DataTable", () => {
   interface Row {
     kw: string;
     rank: number | null;
@@ -111,13 +103,5 @@ describe("DataTable / Tabs", () => {
   it("空のとき emptyText", () => {
     const html = renderToStaticMarkup(createElement(DataTable<Row>, { rows: [], columns, rowKey: (r) => r.kw }));
     expect(html).toContain("表示できるデータがありません");
-  });
-  it("Tabs は role=tablist と aria-selected", () => {
-    const html = renderToStaticMarkup(
-      createElement(Tabs, { tabs: [{ id: "a", label: "A", count: 2 }, { id: "b", label: "B" }], value: "b", onChange: () => {} }),
-    );
-    expect(html).toContain('role="tablist"');
-    expect(html).toContain('aria-selected="true"');
-    expect(html).toContain(">2<");
   });
 });

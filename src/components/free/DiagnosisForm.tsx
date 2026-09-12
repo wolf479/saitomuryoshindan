@@ -8,7 +8,6 @@
 import type { FormEvent } from "react";
 import { Button, Field, Input } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
-import { ServiceGuideButton } from "./ServiceGuideButton";
 
 export type Mode = "page" | "site";
 
@@ -112,14 +111,6 @@ export function DiagnosisForm({
         </p>
       </div>
 
-      <div className="mt-5 text-center">
-        <p className="text-[12px] leading-relaxed text-muted">
-          診断でわかることをまとめた資料をご用意しています。
-        </p>
-        <div className="mt-2 flex justify-center">
-          <ServiceGuideButton />
-        </div>
-      </div>
     </section>
   );
 }

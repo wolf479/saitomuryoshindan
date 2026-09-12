@@ -126,33 +126,7 @@ export function niceMax(max: number, steps = 4): number {
   return round(nice * magnitude * steps, 6);
 }
 
-/** 折れ線の points 属性。値が 1 つなら水平線 */
-export function polylinePoints(values: readonly number[], width: number, height: number, pad = 2): string {
-  const vals = values.filter((v) => Number.isFinite(v));
-  if (vals.length === 0) return "";
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
-  const span = max - min;
-  const innerW = width - pad * 2;
-  const innerH = height - pad * 2;
-  const stepX = vals.length > 1 ? innerW / (vals.length - 1) : 0;
-  return vals
-    .map((v, i) => {
-      const x = round(pad + i * stepX, 2);
-      // 全部同じ値なら中央に水平線
-      const y = span === 0 ? round(height / 2, 2) : round(pad + innerH - ((v - min) / span) * innerH, 2);
-      return `${x},${y}`;
-    })
-    .join(" ");
-}
 
-/** polylinePoints の末尾の点（終端の丸印用） */
-export function lastPoint(points: string): { x: number; y: number } | null {
-  const last = points.trim().split(" ").pop();
-  if (!last) return null;
-  const [x, y] = last.split(",").map(Number);
-  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
-}
 
 /** 百分率の表示（合計 100 になるよう最大剰余法で丸める） */
 export function percentages(values: readonly number[]): number[] {

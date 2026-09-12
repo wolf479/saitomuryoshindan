@@ -3,11 +3,9 @@ import {
   arcPath,
   circumference,
   donutDash,
-  lastPoint,
   niceMax,
   percentages,
   polarToCartesian,
-  polylinePoints,
   ringSegmentPath,
   segmentAngles,
 } from "../math";
@@ -90,21 +88,6 @@ describe("niceMax", () => {
   });
 });
 
-describe("polylinePoints", () => {
-  it("値の数だけ点があり、最大が上・最小が下", () => {
-    const p = polylinePoints([1, 3, 2], 120, 28, 2);
-    const pts = p.split(" ");
-    expect(pts).toHaveLength(3);
-    expect(pts[0]).toBe("2,26");
-    expect(pts[1]).toBe("60,2");
-    expect(lastPoint(p)).toEqual({ x: 118, y: 14 });
-  });
-  it("1 点・同じ値なら中央の高さ", () => {
-    expect(polylinePoints([5], 120, 28)).toBe("2,14");
-    expect(polylinePoints([4, 4], 120, 28)).toBe("2,14 118,14");
-    expect(polylinePoints([], 120, 28)).toBe("");
-  });
-});
 
 describe("percentages", () => {
   it("合計 100 に丸める", () => {

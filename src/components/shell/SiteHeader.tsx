@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
-import { MAIN_APP_URL } from "@/lib/main-app";
 import { LogoMark } from "./LogoMark";
 
 /**
  * 全ページ共通のヘッダー。機能が 1 本なのでナビゲーションは持たず、
- * ブランドと「無料」であることだけを示す（サイドバーは廃止した）。
+ * ブランドと「無料」であることだけを示す。
+ *
+ * 外部サイトへのリンクは置かない（OEM 提供のため、利用者を運営元以外へ
+ * 送る導線を画面に出さない）。
  * 印刷 / PDF では no-print で消える。
  */
 export function SiteHeader() {
@@ -26,16 +28,10 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <span className="ml-1 shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
+        <span className="ml-auto shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
           無料
         </span>
 
-        <a
-          href={`${MAIN_APP_URL}/plans`}
-          className="ml-auto hidden shrink-0 rounded-lg px-3 py-2 text-[13px] font-bold text-muted outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40 sm:block"
-        >
-          有料プラン
-        </a>
       </div>
     </header>
   );

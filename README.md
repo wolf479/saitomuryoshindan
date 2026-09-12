@@ -22,7 +22,6 @@ npm run dev                  # http://localhost:3000
 | `/api/analyze` | 1 ページの診断 |
 | `/api/site` | サイト全体の診断（進捗を配信しながらクロール） |
 | `/api/faq` | 想定 FAQ の生成（`ANTHROPIC_API_KEY` があるときだけ） |
-| `/plans`・`/sign-up` | 本体サービスへの案内（`NEXT_PUBLIC_MAIN_APP_URL` へ転送するだけ） |
 
 ---
 
@@ -97,9 +96,8 @@ npm run dev                  # http://localhost:3000
 | `FREE_FAQ_DAILY_LIMIT` | 任意 | FAQ 生成の 1 日の上限（既定 500） |
 | `SITE_MAX_PAGES` | 任意 | サイト全体モードのページ数上限（既定 300、最大 1000） |
 | `NEXT_PUBLIC_APP_VERSION` | 任意 | フッターのバージョン表記 |
-| `NEXT_PUBLIC_CONTACT_NAME` / `NEXT_PUBLIC_CONTACT_URL` | 任意 | レポート末尾「次のステップ」の連絡先 |
+| `NEXT_PUBLIC_CONTACT_NAME` / `NEXT_PUBLIC_CONTACT_URL` | 任意 | レポート末尾「次のステップ」に出す運営元の連絡先 |
 | `NEXT_PUBLIC_SERVICE_GUIDE_URL` | 任意 | 配布するサービス資料のファイル。未設定ならその場で PDF を組み立てる |
-| `NEXT_PUBLIC_MAIN_APP_URL` | 任意 | 有料プラン・登録の案内リンクの送り先（既定 `https://app.seo-checker.tokyo`） |
 | `ALLOW_PRIVATE_HOSTS` | 開発用 | localhost や LAN 内のサイトを診断したいときだけ `1`。**本番では絶対に設定しない** |
 
 ---
@@ -146,14 +144,25 @@ src/
 
 ---
 
+## OEM（ホワイトラベル）前提
+
+**画面から外部サイトへ出るリンクは 1 つも置きません。** 提供元を利用者に見せないためで、次を守ってください。
+
+- ヘッダー・フッター・診断フォーム・レポートに外部リンクを足さない
+- 診断対象サイトへ送る User-Agent（`src/lib/analyzer/fetch.ts` の `USER_AGENT`）に、提供元が特定できる URL やリポジトリ名を入れない。相手のアクセスログに残ります
+- 画面に出る唯一の外部向け連絡先は `NEXT_PUBLIC_CONTACT_NAME` / `NEXT_PUBLIC_CONTACT_URL`。**運営元自身のもの**を設定してください（未設定なら、そのブロックごと表示されません）
+
+サービス資料の PDF は `NEXT_PUBLIC_SERVICE_GUIDE_URL` で自社のファイルに差し替えられます。未設定のときに組み立てられる既定の資料は、掲載するツール一覧と料金が `src/lib/features/registry.ts` / `src/lib/plans/catalog.ts` の値なので、**自社で提供する内容に合わせて書き換えてから公開してください**。
+
+---
+
 ## 入っていないもの
 
 - ログイン（Clerk）・課金（Stripe）・Supabase への保存
 - `/tools/*` のツール群、`/settings`、`/admin`
+- 外部サービスへの案内ページ（`/plans`・`/sign-up`）
 - MEO（Google マップ・店舗情報）の診断 — 扱いません
 - 利用規約・プライバシーポリシー・特商法表記のページ（**公開して使う場合はご自身で用意してください**）
-
-`/plans` と `/sign-up` は有料プラン・登録の案内として、`NEXT_PUBLIC_MAIN_APP_URL` の送り先へ転送するだけです。
 
 機能の定義（`src/lib/features/registry.ts`）と料金プラン（`src/lib/plans/catalog.ts`）は、サービス資料の PDF を組み立てるために持っています。
 

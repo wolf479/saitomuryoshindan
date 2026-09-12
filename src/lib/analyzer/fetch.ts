@@ -1,8 +1,11 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
-export const USER_AGENT =
-  "Mozilla/5.0 (compatible; SiteKenshin/0.1; +https://github.com/wolf479/saitomuryoshindan)";
+/**
+ * 診断対象サイトへ送る名乗り。相手のアクセスログに残るので、
+ * OEM 提供元が特定できる URL やリポジトリは入れない。
+ */
+export const USER_AGENT = "Mozilla/5.0 (compatible; SiteKenshin/0.1)";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const MAX_BYTES = 3 * 1024 * 1024; // 3MB

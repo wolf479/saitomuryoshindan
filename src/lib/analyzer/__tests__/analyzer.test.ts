@@ -5,7 +5,7 @@ import { normalizeUrl } from "../fetch";
 import { checkHeadings, findLevelSkips } from "../headings";
 import { checkStructuredData, extractJsonLd } from "../jsonld";
 import { checkMeta } from "../meta";
-import { evaluateRobots } from "../robots";
+import { checkCrawlers, evaluateRobots, type SiteFiles } from "../robots";
 import { buildCategories, overallScore, scoreCategory } from "../scoring";
 import { check, optionalCheck } from "../check";
 import { extractSitemaps } from "../robots";
@@ -57,6 +57,68 @@ describe("evaluateRobots", () => {
     const txt = "User-agent: *\nDisallow: /admin/";
     const r = evaluateRobots(txt, pageUrl, robotsUrl);
     expect(r.blocked).toEqual([]);
+  });
+});
+
+describe("noindex の採点", () => {
+  const files: SiteFiles = {
+    origin: "https://example.com",
+    robotsTxt: "User-agent: *\nAllow: /\n",
+    sitemaps: [],
+    llmsTxt: { present: false, length: 0, status: 404 },
+    llmsFullTxt: { present: false, length: 0 },
+  };
+  const NOINDEX = '<html><head><meta name="robots" content="noindex,follow"></head><body></body></html>';
+
+  const noindexOf = (url: string, html = NOINDEX, headers = new Headers()) =>
+    checkCrawlers(new URL(url), cheerio.load(html), headers, files).find((c) => c.id === "noindex")!;
+
+  it("公開ページの noindex は未対応（配点 2）", () => {
+    const c = noindexOf("https://example.com/company");
+    expect(c.status).toBe("fail");
+    expect(c.weight).toBe(2);
+    expect(c.advice).toBeDefined();
+  });
+
+  it("X-Robots-Tag の noindex も拾う", () => {
+    const c = noindexOf(
+      "https://example.com/company",
+      "<html><body></body></html>",
+      new Headers({ "x-robots-tag": "noindex" }),
+    );
+    expect(c.status).toBe("fail");
+  });
+
+  // 検索結果・カート・送信完了などの noindex は意図した正しい設定。
+  // 減点すると「外してください」という誤った助言になるので対象外にする
+  it.each([
+    ["https://example.com/search", "サイト内検索"],
+    ["https://example.com/?s=%E6%96%99%E9%87%91", "サイト内検索"],
+    ["https://example.com/catalogsearch/result/?q=shoes", "サイト内検索"],
+    ["https://example.com/search.php", "サイト内検索"],
+    ["https://example.com/cart", "カート"],
+    ["https://example.com/contact/thanks", "確認・完了"],
+    ["https://example.com/mypage/order", "ログイン"],
+    ["https://example.com/news/1?print=1", "印刷"],
+  ])("%s の noindex は減点しない", (url, kind) => {
+    const c = noindexOf(url);
+    expect(c.status).toBe("pass");
+    // 配点（カテゴリの分母）はページ間で揃えたまま、減点だけを外す
+    expect(c.weight).toBe(2);
+    expect(c.earned).toBe(2);
+    expect(c.label).toContain(kind);
+    expect(c.evidence).toContain("対象外");
+    expect(c.advice).toBeUndefined();
+  });
+
+  it("検索語の無い ?s= は検索結果とみなさない", () => {
+    expect(noindexOf("https://example.com/?s=").status).toBe("fail");
+  });
+
+  it("noindex が無ければ根拠を出さずに pass", () => {
+    const c = noindexOf("https://example.com/search", "<html><body></body></html>");
+    expect(c.status).toBe("pass");
+    expect(c.evidence).toBeUndefined();
   });
 });
 
@@ -145,6 +207,21 @@ describe("checkStructuredData", () => {
     const byId = run("<html><body></body></html>", "https://example.com/");
     expect(byId["jsonld-website"].status).toBe("warn");
     expect(byId["jsonld-website"].weight).toBe(1);
+  });
+
+  // パンくずは上位階層への経路を示すもの。最上位のトップページには示す位置が無い
+  it("トップページではパンくずの不在を減点しない", () => {
+    const byId = run("<html><body></body></html>", "https://example.com/index.html");
+    expect(byId["jsonld-breadcrumb"].status).toBe("pass");
+    expect(byId["jsonld-breadcrumb"].weight).toBe(1);
+    expect(byId["jsonld-breadcrumb"].label).toContain("トップページのため");
+    expect(byId["jsonld-breadcrumb"].advice).toBeUndefined();
+  });
+
+  it("下層ページではパンくずが無いと warn", () => {
+    const byId = run("<html><body></body></html>", "https://example.com/company/");
+    expect(byId["jsonld-breadcrumb"].status).toBe("warn");
+    expect(byId["jsonld-breadcrumb"].weight).toBe(1);
   });
 });
 

@@ -116,6 +116,146 @@ export function extractSitemaps(robotsTxt: string | null): string[] {
   return [...new Set(urls)];
 }
 
+/* ─────────────────────────────────────────────────────────────
+   noindex は「このページを検索結果に出さない」という意思表示であり、
+   ページの種類によっては正しい設定になる。サイト内検索の結果・カート・
+   ログイン・送信完了・印刷用ページなどを索引に載せると、中身の薄いページや
+   重複ページが増えるだけで、Google 自身もサイト内検索の結果は索引させない
+   よう案内している。これを「未対応」として減点すると noindex を外す方向の
+   助言になってしまうため、URL から種類が分かるページは採点から外す。
+
+   判断材料は URL しか無いので、索引に載せたい理由がまず考えられない型だけを
+   並べる（記事一覧・タグページのように、載せるかどうかが方針で分かれるものは
+   入れない）。ここに該当しないページの noindex は今まで通り減点する。
+   ───────────────────────────────────────────────────────────── */
+
+const SEARCH_RESULT_PAGE = "サイト内検索の結果ページ";
+const PREVIEW_PAGE = "下書き・プレビュー用のページ";
+const PRINT_PAGE = "印刷用のページ";
+
+/** パスの 1 区切りとして現れたら、その種類のページとみなす名前 */
+const NOINDEX_EXPECTED_PATHS: readonly { kind: string; names: readonly string[] }[] = [
+  {
+    kind: SEARCH_RESULT_PAGE,
+    names: [
+      "search",
+      "searches",
+      "searchresult",
+      "searchresults",
+      "search-result",
+      "search-results",
+      "catalogsearch",
+      "検索",
+    ],
+  },
+  {
+    kind: "カート・購入手続きのページ",
+    names: ["cart", "carts", "basket", "checkout", "checkouts", "shopping-cart", "shoppingcart", "カート"],
+  },
+  {
+    kind: "ログイン・会員専用のページ",
+    names: [
+      "login",
+      "signin",
+      "sign-in",
+      "logout",
+      "signout",
+      "sign-out",
+      "mypage",
+      "my-page",
+      "myaccount",
+      "my-account",
+      "password",
+    ],
+  },
+  {
+    kind: "管理画面のページ",
+    names: ["admin", "wp-admin", "administrator"],
+  },
+  {
+    kind: PREVIEW_PAGE,
+    names: ["preview", "previews", "draft", "drafts"],
+  },
+  {
+    kind: "入力フォームの確認・完了ページ",
+    names: [
+      "confirm",
+      "confirmation",
+      "complete",
+      "completed",
+      "completion",
+      "thanks",
+      "thankyou",
+      "thank-you",
+      "finish",
+      "sent",
+      "完了",
+      "送信完了",
+      "ありがとうございました",
+    ],
+  },
+  {
+    kind: PRINT_PAGE,
+    names: ["print", "printview", "print-view", "printer-friendly"],
+  },
+  {
+    kind: "エラーページ",
+    names: ["404", "403", "500", "error", "not-found", "notfound"],
+  },
+];
+
+/**
+ * クエリ名で分かる種類。
+ * `requireValue` は値が空のときに無視するかどうか（`?s=` だけの URL は
+ * WordPress では検索ではなく一覧に落ちるため、検索語がある場合だけ数える）。
+ */
+const NOINDEX_EXPECTED_QUERIES: readonly {
+  kind: string;
+  names: readonly string[];
+  requireValue: boolean;
+}[] = [
+  {
+    kind: SEARCH_RESULT_PAGE,
+    names: ["s", "q", "query", "keyword", "keywords", "search", "search_word", "searchword", "sword", "word"],
+    requireValue: true,
+  },
+  { kind: PREVIEW_PAGE, names: ["preview", "preview_id", "preview_nonce"], requireValue: false },
+  { kind: PRINT_PAGE, names: ["print"], requireValue: false },
+];
+
+/** パスを小文字の名前の並びにする（% エンコードと拡張子は外す） */
+function pathSegments(pageUrl: URL): string[] {
+  let path = pageUrl.pathname;
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    // 壊れた % エンコードはそのまま扱う
+  }
+  return path
+    .toLowerCase()
+    .split("/")
+    .filter(Boolean)
+    .map((seg) => seg.replace(/\.(html?|php|aspx?|jsp|cgi)$/, ""));
+}
+
+/**
+ * noindex が設定されていても減点しないページか。
+ * 該当すればレポートに出す種類名を、しなければ null を返す。
+ */
+export function intentionalNoindexKind(pageUrl: URL): string | null {
+  const segments = pathSegments(pageUrl);
+  for (const { kind, names } of NOINDEX_EXPECTED_PATHS) {
+    if (segments.some((seg) => names.includes(seg))) return kind;
+  }
+  for (const [rawName, value] of pageUrl.searchParams) {
+    const name = rawName.toLowerCase();
+    for (const { kind, names, requireValue } of NOINDEX_EXPECTED_QUERIES) {
+      if (names.includes(name) && (!requireValue || value.trim() !== "")) return kind;
+    }
+  }
+  return null;
+}
+
 export function checkCrawlers(
   pageUrl: URL,
   $: cheerio.CheerioAPI,
@@ -185,21 +325,33 @@ export function checkCrawlers(
   );
 
   // --- noindex ---------------------------------------------------------------
+  // サイト内検索の結果・カート・送信完了など、索引に載せないのが通例のページは
+  // noindex が正しい設定なので減点しない（intentionalNoindexKind のコメント参照）。
+  // WebSite や image-alt と同じく、配点（= カテゴリの分母）はページ間で揃えたまま
+  // 判定だけ pass にする。
   const metaRobots = ($('meta[name="robots"]').attr("content") ?? "").toLowerCase();
   const xRobots = (pageHeaders.get("x-robots-tag") ?? "").toLowerCase();
   const noindex = metaRobots.includes("noindex") || xRobots.includes("noindex");
+  const noindexKind = noindex ? intentionalNoindexKind(pageUrl) : null;
+  const robotsSetting = `meta robots="${metaRobots || "-"}" / X-Robots-Tag="${xRobots || "-"}"`;
   results.push(
     check({
       id: "noindex",
       category: "crawlers",
-      status: noindex ? "fail" : "pass",
+      status: !noindex || noindexKind ? "pass" : "fail",
       weight: 2,
-      label: noindex ? "noindex が設定されている" : "noindex が設定されていない",
-      evidence: noindex
-        ? `meta robots="${metaRobots || "-"}" / X-Robots-Tag="${xRobots || "-"}"`
-        : undefined,
+      label: !noindex
+        ? "noindex が設定されていない"
+        : noindexKind
+          ? `${noindexKind}のため noindex で問題ない`
+          : "noindex が設定されている",
+      evidence: !noindex
+        ? undefined
+        : noindexKind
+          ? `${robotsSetting}（${noindexKind}は索引に載せないのが通例のため、この項目は対象外です）`
+          : robotsSetting,
       advice:
-        "このページは noindex が指定されており、検索エンジンにも AI 検索にも登録されません。公開したいページであれば meta robots / X-Robots-Tag の noindex を外してください。",
+        "このページは noindex が指定されており、検索エンジンにも AI 検索にも登録されません。公開したいページであれば meta robots / X-Robots-Tag の noindex を外してください。サイト内検索の結果や送信完了ページのように、意図して検索結果から外している場合はそのままで問題ありません。",
     }),
   );
 

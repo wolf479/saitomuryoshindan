@@ -56,8 +56,8 @@ npm run dev                  # http://localhost:3000
 
 | カテゴリ | 重み | 見るもの |
 |---|---|---|
-| AI クローラ可否 | 20 | robots.txt での**検索用**クローラ（OAI-SearchBot / PerplexityBot / Claude-SearchBot など）の可否、noindex |
-| 構造化データ | 25 | JSON-LD の有無と文法、Organization / BreadcrumbList / sameAs、WebSite（トップのみ）、FAQPage（FAQ のあるページのみ） |
+| AI クローラ可否 | 20 | robots.txt での**検索用**クローラ（OAI-SearchBot / PerplexityBot / Claude-SearchBot など）の可否、noindex（サイト内検索の結果・カート・送信完了など、索引に載せないのが通例のページは対象外） |
+| 構造化データ | 25 | JSON-LD の有無と文法、Organization / sameAs、BreadcrumbList（下層ページのみ）、WebSite（トップのみ）、FAQPage（FAQ のあるページのみ） |
 | メタ情報 | 20 | title、meta description（長さ）、OGP、canonical、lang |
 | 見出し | 15 | h1 がちょうど 1 つか、h2 / h3 の階層が飛んでいないか |
 | コンテンツ | 20 | 具体的な情報（数値・日付・組織名・連絡先）の含有、見出しに本文が伴うか、画像の alt、JS 描画依存（SPA）の疑い |

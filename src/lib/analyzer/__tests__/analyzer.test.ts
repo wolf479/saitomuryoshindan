@@ -5,7 +5,7 @@ import { normalizeUrl } from "../fetch";
 import { checkHeadings, findLevelSkips } from "../headings";
 import { checkStructuredData, extractJsonLd } from "../jsonld";
 import { checkMeta } from "../meta";
-import { checkCrawlers, evaluateRobots, type SiteFiles } from "../robots";
+import { checkCrawlers, evaluateRobots, inspectCrawlers, type SiteFiles } from "../robots";
 import { buildCategories, overallScore, scoreCategory } from "../scoring";
 import { check, optionalCheck } from "../check";
 import { extractSitemaps } from "../robots";
@@ -60,18 +60,31 @@ describe("evaluateRobots", () => {
   });
 });
 
-describe("noindex の採点", () => {
-  const files: SiteFiles = {
-    origin: "https://example.com",
-    robotsTxt: "User-agent: *\nAllow: /\n",
-    sitemaps: [],
-    llmsTxt: { present: false, length: 0, status: 404 },
-    llmsFullTxt: { present: false, length: 0 },
-  };
-  const NOINDEX = '<html><head><meta name="robots" content="noindex,follow"></head><body></body></html>';
+const SITE_FILES: SiteFiles = {
+  origin: "https://example.com",
+  robotsTxt: "User-agent: *\nAllow: /\n",
+  sitemaps: [],
+  llmsTxt: { present: false, length: 0, status: 404 },
+  llmsFullTxt: { present: false, length: 0 },
+};
+const NOINDEX = '<html><head><meta name="robots" content="noindex,follow"></head><body></body></html>';
 
+const withRobots = (robotsTxt: string): SiteFiles => ({ ...SITE_FILES, robotsTxt });
+
+const stateOf = (url: string, html = NOINDEX, files = SITE_FILES, headers = new Headers()) => {
+  const pageUrl = new URL(url);
+  return inspectCrawlers(pageUrl, cheerio.load(html), headers, files);
+};
+
+const crawlerChecks = (url: string, html = NOINDEX, files = SITE_FILES, headers = new Headers()) => {
+  const pageUrl = new URL(url);
+  const checks = checkCrawlers(pageUrl, stateOf(url, html, files, headers), files);
+  return Object.fromEntries(checks.map((c) => [c.id, c]));
+};
+
+describe("noindex の採点", () => {
   const noindexOf = (url: string, html = NOINDEX, headers = new Headers()) =>
-    checkCrawlers(new URL(url), cheerio.load(html), headers, files).find((c) => c.id === "noindex")!;
+    crawlerChecks(url, html, SITE_FILES, headers)["noindex"];
 
   it("公開ページの noindex は未対応（配点 2）", () => {
     const c = noindexOf("https://example.com/company");
@@ -119,6 +132,45 @@ describe("noindex の採点", () => {
     const c = noindexOf("https://example.com/search", "<html><body></body></html>");
     expect(c.status).toBe("pass");
     expect(c.evidence).toBeUndefined();
+  });
+});
+
+// もともと検索に載せないページは、採点しても直しようのない減点が並ぶだけなので
+// サイト診断の集計から外す（付録に参考として残す）
+describe("inspectCrawlers（採点対象にするかの判断）", () => {
+  it("検索結果ページの noindex は採点対象から外す", () => {
+    const { exclusion } = stateOf("https://example.com/search");
+    expect(exclusion?.kind).toContain("サイト内検索");
+    expect(exclusion?.by).toEqual(["noindex"]);
+  });
+
+  it("公開ページの noindex では外さない（設定ミスかもしれないため）", () => {
+    expect(stateOf("https://example.com/company").exclusion).toBeNull();
+  });
+
+  it("noindex も robots.txt の拒否も無ければ外さない", () => {
+    expect(stateOf("https://example.com/search", "<html><body></body></html>").exclusion).toBeNull();
+  });
+
+  it("このページだけ止める robots.txt でも外す", () => {
+    const html = "<html><body></body></html>";
+    const files = withRobots("User-agent: *\nDisallow: /search\n");
+    expect(stateOf("https://example.com/search", html, files).exclusion?.by).toEqual(["robots"]);
+    // 意図した拒否なので、クローラ可否の項目も減点しない
+    const byId = crawlerChecks("https://example.com/search", html, files);
+    expect(byId["ai-crawlers-allowed"].status).toBe("pass");
+    expect(byId["ai-crawlers-allowed"].label).toContain("サイト内検索");
+    expect(byId["ai-crawlers-allowed"].evidence).toContain("対象外");
+  });
+
+  // サイト全体を止めているなら、それは検索結果ページの都合ではなくサイトの問題
+  it("サイト全体を止める robots.txt では外さず、今まで通り減点する", () => {
+    const html = "<html><body></body></html>";
+    const files = withRobots("User-agent: *\nDisallow: /\n");
+    expect(stateOf("https://example.com/search", html, files).exclusion).toBeNull();
+    expect(crawlerChecks("https://example.com/search", html, files)["ai-crawlers-allowed"].status).toBe(
+      "fail",
+    );
   });
 });
 
@@ -521,6 +573,7 @@ function fakeAnalysis(
         h1Count: 1,
         fetchedAt: "2026-01-01T00:00:00.000Z",
       },
+      exclusion: null,
       overall: 0,
       categories: buildCategories(built),
       notes: [],

@@ -13,6 +13,7 @@ import { analyzeSite } from "../site";
  *  - /company・/service はパンくずがあり、WebSite が無い（下層なので対象外）
  *  - /blog/article は下層なのにパンくずが無い（ここだけ構造化データで減点される）
  *  - /company は表組み中心で、本文の書き方もトップとは違う
+ *  - /search は noindex のサイト内検索の結果（採点から外れる）
  * この状態でページ単位のスコアが何によって変わるのかと、サイト診断がその差を
  * 「ページによって差がある項目」として拾えることを確かめる。
  */
@@ -48,7 +49,7 @@ const PARAGRAPH = "当社はダミーの会社です。事業内容や実績に�
 
 const TOP_HTML = `<!doctype html><html lang="ja">${HEAD("ダミー社", TOP_JSONLD)}
   <body>
-    <nav><a href="/">ホーム</a><a href="/company">会社概要</a><a href="/service">サービス</a></nav>
+    <nav><a href="/">ホーム</a><a href="/company">会社概要</a><a href="/service">サービス</a><a href="/search">検索</a></nav>
     <main>
       <h1>ダミー社</h1>
       <h2>事業内容</h2><p>${PARAGRAPH}</p>
@@ -94,6 +95,17 @@ const ARTICLE_HTML = `<!doctype html><html lang="ja">${HEAD("記事 | ダミー�
     <main><h1>記事</h1><h2>本文</h2><p>${PARAGRAPH}</p></main>
   </body></html>`;
 
+/**
+ * サイト内検索の結果ページ。noindex で、説明文も本文もほとんど無い。
+ * 検索に載せないページなので、これを採点に混ぜると平均点だけが下がる。
+ */
+const SEARCH_HTML = `<!doctype html><html lang="ja">
+  <head><meta charset="utf-8"><title>検索結果 | ダミー社</title><meta name="robots" content="noindex,follow"></head>
+  <body>
+    <nav><a href="/">ホーム</a></nav>
+    <main><h1>検索結果</h1><p>該当する記事はありません。</p></main>
+  </body></html>`;
+
 let server: Server;
 let origin: string;
 /** "/" から別オリジン（server）へ転送するだけのサイト */
@@ -117,6 +129,8 @@ beforeAll(async () => {
         return send(SERVICE_HTML.replace("</main>", `<a href="/blog/article">記事</a></main>`));
       case "/blog/article":
         return send(ARTICLE_HTML);
+      case "/search":
+        return send(SEARCH_HTML);
       case "/robots.txt":
         return send(`User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml`, "text/plain");
       case "/sitemap.xml":
@@ -206,6 +220,16 @@ describe("ページ単位の診断", () => {
     expect(total(company)).toBe(total(top));
   });
 
+  // page モードは 1 ページだけなので平均は無い。点数は出すが、参考値だと注記する
+  it("検索対象外のページは単体診断でも注記を出す", async () => {
+    const search = await analyze(`${origin}/search`);
+    expect(search.exclusion?.kind).toContain("サイト内検索");
+    expect(search.exclusion?.by).toEqual(["noindex"]);
+    expect(search.notes.some((n) => n.includes("検索対象から外されています"))).toBe(true);
+    // 公開ページには付かない
+    expect((await analyze(`${origin}/company`)).exclusion).toBeNull();
+  });
+
   it("入力 URL は page.url に、転送先は finalUrl に残る", async () => {
     const r = await analyze(`${redirectorOrigin}/company`);
     expect(r.page.url).toBe(`${redirectorOrigin}/company`);
@@ -230,13 +254,15 @@ describe("analyzeSite", () => {
     expect(site.failures).toEqual([]);
     expect(site.overall).toBeGreaterThan(0);
     expect(site.crawl).toMatchObject({
-      discovered: 4,
-      fetched: 4,
-      analyzed: 4,
+      discovered: 5,
+      fetched: 5,
+      // /search も診断はするが、採点対象からは外れる（pages は 4 件）
+      analyzed: 5,
+      excluded: 1,
       failed: 0,
       skipped: 0,
       sitemapCount: 2, // 入力 URL "/" 以外の sitemap 掲載ページ
-      linkCount: 1,
+      linkCount: 2,
       truncated: null,
     });
     expect(site.crawl.durationMs).toBeGreaterThanOrEqual(0);
@@ -272,6 +298,31 @@ describe("analyzeSite", () => {
     expect(site.checks[0].spread).toBe("mixed");
   });
 
+  // もともと検索に載せないページを採点に混ぜると、直しようのない減点で
+  // サイト全体の平均だけが下がる。採点からは外し、参考として一覧に残す
+  it("検索対象ではないページは採点から外し、参考として残す", async () => {
+    const site = await analyzeSite(`${origin}/`);
+
+    expect(site.pages.map((p) => new URL(p.url).pathname)).not.toContain("/search");
+    expect(site.excluded).toHaveLength(1);
+    expect(new URL(site.excluded[0].url).pathname).toBe("/search");
+    expect(site.excluded[0].kind).toContain("サイト内検索");
+    expect(site.excluded[0].by).toEqual(["noindex"]);
+
+    // 判定の集計にも混ざらない（説明文が無いのは /search だけ）
+    const byId = Object.fromEntries(site.checks.map((c) => [c.id, c]));
+    expect(byId["description"].counts.fail).toBe(0);
+    expect(byId["description"].affected).toEqual([]);
+    expect(byId["noindex"].counts.pass).toBe(4);
+
+    // 平均点は採点した 4 ページだけの平均
+    const average = Math.round(
+      site.pages.reduce((sum, p) => sum + p.overall, 0) / site.pages.length,
+    );
+    expect(site.overall).toBe(average);
+    expect(site.notes.some((n) => n.includes("採点から外しました"))).toBe(true);
+  });
+
   it("maxPages で打ち切ると truncated と注記が付く", async () => {
     const site = await analyzeSite(`${origin}/company`, { maxPages: 2 });
     expect(site.pages).toHaveLength(2);
@@ -291,8 +342,8 @@ describe("analyzeSite", () => {
     const crawl = progress.filter((p) => p.phase === "crawl");
     expect(crawl).toHaveLength(site.crawl.fetched);
     const last = crawl[crawl.length - 1];
-    expect(last.fetched).toBe(4);
-    expect(last.analyzed).toBe(4);
+    expect(last.fetched).toBe(5);
+    expect(last.analyzed).toBe(5);
     expect(last.queued).toBe(0);
     expect(last.elapsedMs).toBeGreaterThanOrEqual(0);
   });

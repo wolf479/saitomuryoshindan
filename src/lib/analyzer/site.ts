@@ -14,6 +14,7 @@ import {
   type SiteCategoryScore,
   type SiteCheckSummary,
   type SiteDiscovery,
+  type SiteExcludedPage,
   type SitePageFailure,
   type SitePageResult,
   type SiteProgress,
@@ -130,7 +131,24 @@ export async function analyzeSite(
     },
   });
 
-  const pages: SitePageResult[] = analyses.map(({ result }) => ({
+  // 検索対象から外されているページ（サイト内検索の結果など）は採点しない。
+  // title も本文も無くて当然のページを平均に混ぜると、直しようのない減点で
+  // サイト全体の点だけが下がる。診断はしたので参考として一覧には残す。
+  // ただし全ページが該当するときは採点対象が無くなってしまうので、そのまま集計する。
+  const scoredAnalyses = analyses.filter(({ result }) => !result.exclusion);
+  const allExcluded = scoredAnalyses.length === 0;
+  const scored = allExcluded ? analyses : scoredAnalyses;
+  const excluded: SiteExcludedPage[] = allExcluded
+    ? []
+    : analyses
+        .filter(({ result }) => result.exclusion)
+        .map(({ result }) => ({
+          url: result.page.finalUrl,
+          kind: result.exclusion!.kind,
+          by: result.exclusion!.by,
+        }));
+
+  const pages: SitePageResult[] = scored.map(({ result }) => ({
     url: result.page.finalUrl,
     overall: result.overall,
     scores: Object.fromEntries(
@@ -186,6 +204,15 @@ export async function analyzeSite(
   if (failures.length > 0) {
     notes.push(`${fmt(failures.length)} ページは取得できなかったため集計から除きました`);
   }
+  if (excluded.length > 0) {
+    notes.push(
+      `${fmt(excluded.length)} ページは検索対象ではない（サイト内検索の結果など）ため、採点から外しました（付録 A に一覧）`,
+    );
+  } else if (allExcluded) {
+    notes.push(
+      "診断したページがすべて検索対象外でした。採点するページが無くなるため、今回は外さずに集計しています",
+    );
+  }
   if (crawl.skipped > 0) {
     notes.push(
       `${fmt(crawl.skipped)} 件は HTML 以外・別サイトへの転送・重複のため診断対象外にしました`,
@@ -197,15 +224,17 @@ export async function analyzeSite(
     entryUrl: entry.toString(),
     origin,
     pages,
+    excluded,
     failures,
     overall: average(pages.map((p) => p.overall)),
     categories: summarizeCategories(pages),
-    checks: summarizeChecks(analyses),
+    checks: summarizeChecks(scored),
     discovery,
     crawl: {
       discovered: crawl.discovered,
       fetched: crawl.fetched,
-      analyzed: pages.length,
+      analyzed: analyses.length,
+      excluded: excluded.length,
       failed: failures.length,
       skipped: crawl.skipped,
       durationMs: Date.now() - startedAt,

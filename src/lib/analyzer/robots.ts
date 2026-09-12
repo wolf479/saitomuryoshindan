@@ -2,7 +2,12 @@ import robotsParser from "robots-parser";
 import * as cheerio from "cheerio";
 import { check, optionalCheck } from "./check";
 import { fetchText } from "./fetch";
-import type { CheckResult, CheckStatus } from "./types";
+import type {
+  CheckResult,
+  CheckStatus,
+  ExclusionSignal,
+  SearchExclusion,
+} from "./types";
 
 /* ─────────────────────────────────────────────────────────────
    AI クローラは用途で 2 つに分かれ、robots.txt でも別々に指定できる。
@@ -117,12 +122,13 @@ export function extractSitemaps(robotsTxt: string | null): string[] {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   noindex は「このページを検索結果に出さない」という意思表示であり、
-   ページの種類によっては正しい設定になる。サイト内検索の結果・カート・
-   ログイン・送信完了・印刷用ページなどを索引に載せると、中身の薄いページや
-   重複ページが増えるだけで、Google 自身もサイト内検索の結果は索引させない
-   よう案内している。これを「未対応」として減点すると noindex を外す方向の
-   助言になってしまうため、URL から種類が分かるページは採点から外す。
+   もともと検索に載せないページ。
+
+   サイト内検索の結果・カート・ログイン・送信完了・印刷用ページなどを索引に
+   載せると、中身の薄いページや重複ページが増えるだけで、Google 自身も
+   サイト内検索の結果は索引させないよう案内している。こうしたページを
+   noindex にしたり robots.txt で止めたりするのは正しい運用なので、
+   「未対応」として減点すると設定を外す方向の誤った助言になる。
 
    判断材料は URL しか無いので、索引に載せたい理由がまず考えられない型だけを
    並べる（記事一覧・タグページのように、載せるかどうかが方針で分かれるものは
@@ -239,10 +245,10 @@ function pathSegments(pageUrl: URL): string[] {
 }
 
 /**
- * noindex が設定されていても減点しないページか。
+ * URL の形から「もともと検索に載せないページ」と分かるか。
  * 該当すればレポートに出す種類名を、しなければ null を返す。
  */
-export function intentionalNoindexKind(pageUrl: URL): string | null {
+export function notForSearchKind(pageUrl: URL): string | null {
   const segments = pathSegments(pageUrl);
   for (const { kind, names } of NOINDEX_EXPECTED_PATHS) {
     if (segments.some((seg) => names.includes(seg))) return kind;
@@ -256,28 +262,89 @@ export function intentionalNoindexKind(pageUrl: URL): string | null {
   return null;
 }
 
-export function checkCrawlers(
+/**
+ * ページ単位のクローラまわりの状態。
+ * 採点（checkCrawlers）と「このページを採点対象にするか」の判断が同じものを見るよう、
+ * robots.txt の評価と noindex の読み取りはここで 1 度だけ行う。
+ */
+export interface CrawlerState {
+  robots: RobotsInfo;
+  /** 拒否されている検索用クローラ */
+  blockedSearch: string[];
+  /** 拒否されている学習用クローラ */
+  blockedTraining: string[];
+  /** meta robots の content（小文字） */
+  metaRobots: string;
+  /** X-Robots-Tag（小文字） */
+  xRobots: string;
+  noindex: boolean;
+  /** 検索対象から外されているページなら、その種類と根拠 */
+  exclusion: SearchExclusion | null;
+}
+
+export function inspectCrawlers(
   pageUrl: URL,
   $: cheerio.CheerioAPI,
   pageHeaders: Headers,
   files: SiteFiles,
+): CrawlerState {
+  const robotsUrl = `${pageUrl.origin}/robots.txt`;
+  const robots = evaluateRobots(files.robotsTxt, pageUrl.toString(), robotsUrl);
+  const isSearch = (ua: string) => purposeOf(ua) === "search";
+  const blockedSearch = robots.blocked.filter(isSearch);
+  const blockedTraining = robots.blocked.filter((ua) => purposeOf(ua) === "training");
+
+  const metaRobots = ($('meta[name="robots"]').attr("content") ?? "").toLowerCase();
+  const xRobots = (pageHeaders.get("x-robots-tag") ?? "").toLowerCase();
+  const noindex = metaRobots.includes("noindex") || xRobots.includes("noindex");
+
+  // robots.txt でサイト全体を拒否しているなら、それは「このページだけ外している」
+  // ではなくサイト全体の問題。トップページも拒否されていないときだけ、
+  // このページを狙って外していると見なす
+  const allSearchBlocked =
+    SEARCH_CRAWLERS.length > 0 && blockedSearch.length === SEARCH_CRAWLERS.length;
+  const blockedHereOnly =
+    allSearchBlocked &&
+    evaluateRobots(files.robotsTxt, `${pageUrl.origin}/`, robotsUrl).blocked.filter(isSearch)
+      .length < SEARCH_CRAWLERS.length;
+
+  const kind = notForSearchKind(pageUrl);
+  const by: ExclusionSignal[] = [];
+  if (noindex) by.push("noindex");
+  if (blockedHereOnly) by.push("robots");
+
+  return {
+    robots,
+    blockedSearch,
+    blockedTraining,
+    metaRobots,
+    xRobots,
+    noindex,
+    exclusion: kind && by.length > 0 ? { kind, by } : null,
+  };
+}
+
+export function checkCrawlers(
+  pageUrl: URL,
+  state: CrawlerState,
+  files: SiteFiles,
 ): CheckResult[] {
   const origin = pageUrl.origin;
-  const robotsUrl = `${origin}/robots.txt`;
+  const { robots: info, blockedSearch, blockedTraining, exclusion } = state;
 
   const results: CheckResult[] = [];
 
   // --- robots.txt による AI クローラ許可 -------------------------------------
-  // 採点するのは検索用クローラだけ。学習用の拒否は正当な運用なので減点しない
-  const info = evaluateRobots(files.robotsTxt, pageUrl.toString(), robotsUrl);
-  const blockedSearch = info.blocked.filter((ua) => purposeOf(ua) === "search");
-  const blockedTraining = info.blocked.filter((ua) => purposeOf(ua) === "training");
+  // 採点するのは検索用クローラだけ。学習用の拒否は正当な運用なので減点しない。
+  // サイト内検索の結果のように、もともと検索に載せないページをこのページだけ
+  // 止めているときも、意図した設定なので減点しない
   const allowedSearch = SEARCH_CRAWLERS.map((c) => c.ua).filter(
     (ua) => !blockedSearch.includes(ua),
   );
+  const blockedOnPurpose = exclusion?.by.includes("robots") ?? false;
 
   const searchStatus: CheckStatus =
-    blockedSearch.length === 0
+    blockedSearch.length === 0 || blockedOnPurpose
       ? "pass"
       : blockedSearch.length === SEARCH_CRAWLERS.length
         ? "fail"
@@ -288,14 +355,16 @@ export function checkCrawlers(
       category: "crawlers",
       status: searchStatus,
       weight: 3,
-      label:
-        searchStatus === "pass"
+      label: blockedOnPurpose
+        ? `${exclusion?.kind}のため robots.txt で止めていて問題ない`
+        : searchStatus === "pass"
           ? "AI 検索用クローラがアクセス可能"
           : searchStatus === "fail"
             ? "AI 検索用クローラがすべてブロックされている"
             : "一部の AI 検索用クローラがブロックされている",
-      evidence:
-        blockedSearch.length === 0
+      evidence: blockedOnPurpose
+        ? `拒否: ${blockedSearch.join(", ")}（${exclusion?.kind}は検索に載せないのが通例のため、この項目は対象外です）`
+        : blockedSearch.length === 0
           ? info.exists
             ? `robots.txt で検索用 ${SEARCH_CRAWLERS.length} 種がすべて許可されています`
             : "robots.txt が無いため、すべてのクローラが許可されています"
@@ -326,13 +395,11 @@ export function checkCrawlers(
 
   // --- noindex ---------------------------------------------------------------
   // サイト内検索の結果・カート・送信完了など、索引に載せないのが通例のページは
-  // noindex が正しい設定なので減点しない（intentionalNoindexKind のコメント参照）。
+  // noindex が正しい設定なので減点しない（notForSearchKind のコメント参照）。
   // WebSite や image-alt と同じく、配点（= カテゴリの分母）はページ間で揃えたまま
   // 判定だけ pass にする。
-  const metaRobots = ($('meta[name="robots"]').attr("content") ?? "").toLowerCase();
-  const xRobots = (pageHeaders.get("x-robots-tag") ?? "").toLowerCase();
-  const noindex = metaRobots.includes("noindex") || xRobots.includes("noindex");
-  const noindexKind = noindex ? intentionalNoindexKind(pageUrl) : null;
+  const { metaRobots, xRobots, noindex } = state;
+  const noindexKind = exclusion?.by.includes("noindex") ? exclusion.kind : null;
   const robotsSetting = `meta robots="${metaRobots || "-"}" / X-Robots-Tag="${xRobots || "-"}"`;
   results.push(
     check({

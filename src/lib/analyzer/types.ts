@@ -15,6 +15,25 @@ export type CategoryId =
   | "headings"
   | "content";
 
+/* ─────────────────────────────────────────────────────────────
+   検索対象から外されているページ。
+
+   サイト内検索の結果・カート・送信完了などは、サイト側が意図して検索結果に
+   出さないようにしている。こうしたページを title や本文まで採点すると、
+   「説明文が無い」「本文が薄い」と当然の指摘が並び、サイト全体の平均点だけが
+   下がる。改善の手がかりにならないので、採点対象から外して参考として残す。
+   ───────────────────────────────────────────────────────────── */
+
+/** 検索対象から外れている根拠 */
+export type ExclusionSignal = "noindex" | "robots";
+
+export interface SearchExclusion {
+  /** ページの種類（"サイト内検索の結果ページ" など） */
+  kind: string;
+  /** 根拠（meta robots / X-Robots-Tag の noindex、robots.txt での拒否） */
+  by: ExclusionSignal[];
+}
+
 export interface CheckResult {
   id: string;
   category: CategoryId;
@@ -57,6 +76,11 @@ export interface PageSnapshot {
 
 export interface AnalysisResult {
   page: PageSnapshot;
+  /**
+   * 検索対象から外されているページなら、その種類と根拠。
+   * サイト診断はこのページを採点から外す（page モードでは注記だけ出す）。
+   */
+  exclusion: SearchExclusion | null;
   overall: number;
   categories: CategoryScore[];
   /** 診断中に起きた非致命的な問題 */
@@ -102,6 +126,14 @@ export interface SitePageResult {
   page: Omit<PageSnapshot, "mainText">;
 }
 
+/** 採点から外したページ（検索対象ではないページ）。参考として一覧に残す */
+export interface SiteExcludedPage {
+  url: string;
+  /** ページの種類（"サイト内検索の結果ページ" など） */
+  kind: string;
+  by: ExclusionSignal[];
+}
+
 /** 診断できなかったページ */
 export interface SitePageFailure {
   url: string;
@@ -141,8 +173,10 @@ export interface SiteAnalysisResult {
   /** 入力された URL */
   entryUrl: string;
   origin: string;
-  /** 実際に診断したページ（入力 URL を先頭に含む） */
+  /** 採点したページ（入力 URL を先頭に含む） */
   pages: SitePageResult[];
+  /** 診断はしたが採点から外したページ（サイト内検索の結果など） */
+  excluded: SiteExcludedPage[];
   failures: SitePageFailure[];
   /** 全ページの総合スコアの平均 */
   overall: number;
@@ -179,8 +213,10 @@ export interface SiteCrawlStats {
   discovered: number;
   /** 取得を試みたページ数 */
   fetched: number;
-  /** 診断できたページ数（= pages.length） */
+  /** 診断できたページ数（採点から外したページも含む） */
   analyzed: number;
+  /** そのうち、検索対象ではないため採点から外したページ数 */
+  excluded: number;
   /** 取得・診断に失敗したページ数（= failures.length） */
   failed: number;
   /** HTML 以外・別サイトへの転送・重複で対象外にした数 */

@@ -10,12 +10,12 @@ import {
 import { checkHeadings, extractHeadings } from "./headings";
 import { checkStructuredData, extractJsonLd } from "./jsonld";
 import { checkMeta, extractMeta } from "./meta";
-import { checkCrawlers, fetchSiteFiles, type SiteFiles } from "./robots";
+import { checkCrawlers, fetchSiteFiles, inspectCrawlers, type SiteFiles } from "./robots";
 import { buildCategories, overallScore } from "./scoring";
 import type { AnalysisResult, CheckResult } from "./types";
 
 export { FetchError, type FetchedText } from "./fetch";
-export { fetchSiteFiles, type SiteFiles } from "./robots";
+export { fetchSiteFiles, notForSearchKind, type SiteFiles } from "./robots";
 export * from "./types";
 
 export interface AnalyzeOptions {
@@ -83,8 +83,19 @@ export function analyzeFetched(
   const headings = extractHeadings($);
   const jsonLd = extractJsonLd($);
 
+  // クローラまわりは 1 度だけ読み取り、採点と「採点対象にするか」の判断で共有する
+  const crawlers = inspectCrawlers(finalUrl, $, page.headers, siteFiles);
+  if (crawlers.exclusion) {
+    const by = crawlers.exclusion.by
+      .map((signal) => (signal === "noindex" ? "noindex" : "robots.txt での拒否"))
+      .join("・");
+    notes.push(
+      `このページは${crawlers.exclusion.kind}として検索対象から外されています（${by}）。サイト全体の診断では採点から外すため、このページ単体の点数は参考値です`,
+    );
+  }
+
   const checks: CheckResult[] = [
-    ...checkCrawlers(finalUrl, $, page.headers, siteFiles),
+    ...checkCrawlers(finalUrl, crawlers, siteFiles),
     ...checkStructuredData($, finalUrl.toString()),
     ...checkMeta($),
     ...checkHeadings($),
@@ -108,6 +119,7 @@ export function analyzeFetched(
       h1Count: headings.counts[1],
       fetchedAt: new Date().toISOString(),
     },
+    exclusion: crawlers.exclusion,
     overall: overallScore(categories),
     categories,
     notes,

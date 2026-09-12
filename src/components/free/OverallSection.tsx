@@ -4,12 +4,11 @@
  */
 import { Donut } from "@/components/charts";
 import { StatStrip } from "@/components/ui";
-import { fmt, type ReportSummary } from "@/lib/report";
+import { fmt, type SiteReportSummary } from "@/lib/report";
 import { Commentary, GradeScale, Num, ReportSection, SubHeading } from "./report-parts";
 import { TopImprovementsTable } from "./TopImprovements";
 
-export function OverallSection({ summary, number }: { summary: ReportSummary; number: number }) {
-  const isSite = summary.mode === "site";
+export function OverallSection({ summary, number }: { summary: SiteReportSummary; number: number }) {
   const { counts } = summary;
   return (
     <ReportSection number={number} title="総合評価">
@@ -20,30 +19,22 @@ export function OverallSection({ summary, number }: { summary: ReportSummary; nu
             ariaLabel={`総合スコア ${summary.overall} / 100（${summary.grade.grade}・${summary.grade.label}）`}
           />
           <p className="mt-3 text-[13px] font-bold text-ink">
-            {isSite ? (
-              <>
-                <Num>{fmt(summary.pageCount)}</Num> ページ平均
-              </>
-            ) : (
-              "このページの総合スコア"
-            )}
+            <Num>{fmt(summary.pageCount)}</Num> ページ平均
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-muted">
             <GradeScale />
           </p>
-          {isSite && (
-            <p className="mt-1 text-[11px] leading-relaxed text-muted">
-              <span className="whitespace-nowrap">
-                最高 <Num>{summary.bestPage.overall}</Num> 点
-              </span>{" "}
-              /{" "}
-              <span className="whitespace-nowrap">
-                最低 <Num>{summary.worstPage.overall}</Num> 点
-              </span>
-              <br />
-              <span className="break-all">最低点のページ: {summary.worstPage.path}</span>
-            </p>
-          )}
+          <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            <span className="whitespace-nowrap">
+              最高 <Num>{summary.bestPage.overall}</Num> 点
+            </span>{" "}
+            /{" "}
+            <span className="whitespace-nowrap">
+              最低 <Num>{summary.worstPage.overall}</Num> 点
+            </span>
+            <br />
+            <span className="break-all">最低点のページ: {summary.worstPage.path}</span>
+          </p>
         </div>
 
         <div className="min-w-0">
@@ -59,7 +50,7 @@ export function OverallSection({ summary, number }: { summary: ReportSummary; nu
       <StatStrip
         className="mt-6"
         items={[
-          { label: isSite ? "判定数（ページ × 項目）" : "診断項目", value: fmt(counts.scored), unit: "件" },
+          { label: "判定数（ページ × 項目）", value: fmt(counts.scored), unit: "件" },
           { label: "合格", value: fmt(counts.pass), unit: "件" },
           { label: "改善余地", value: fmt(counts.warn), unit: "件" },
           { label: "未対応", value: fmt(counts.fail), unit: "件" },

@@ -16,7 +16,7 @@ import {
   type SiteFiles,
 } from "@/lib/analyzer";
 import { summarizeCategories, summarizeChecks } from "@/lib/analyzer/site";
-import { buildPageSummary, buildSiteSummary } from "../summary";
+import { buildSiteSummary } from "../summary";
 import type { CommentaryLine } from "../types";
 import {
   CATEGORY_ORDER,
@@ -123,34 +123,6 @@ describe("CHECK_WEIGHTS", () => {
   it("カテゴリの並びと配点は analyzer と同じで、合計は 100", () => {
     expect(results[0].categories.map((c) => c.id)).toEqual([...CATEGORY_ORDER]);
     expect(CATEGORY_ORDER.reduce((sum, id) => sum + CATEGORY_WEIGHTS[id], 0)).toBe(100);
-  });
-});
-
-describe("buildPageSummary（analyzer の実出力）", () => {
-  it("総合スコアと判定件数が analyzer の結果と揃う", () => {
-    const result = results[0];
-    const s = buildPageSummary(result);
-    expect(s.overall).toBe(result.overall);
-    expect(s.counts.scored + s.counts.info).toBe(
-      result.categories.reduce((n, c) => n + c.checks.length, 0),
-    );
-    expect(s.categories.map((c) => c.score)).toEqual(result.categories.map((c) => c.score));
-  });
-
-  it("すべての未対応・改善余地を直すと総合が 100 点になる（丸め誤差の範囲で）", () => {
-    for (const result of results) {
-      const s = buildPageSummary(result);
-      const total = s.overall + s.improvements.reduce((sum, i) => sum + i.gain, 0);
-      expect(Math.abs(100 - total)).toBeLessThan(1.5);
-    }
-  });
-
-  it("見込み総合スコアは 100 を超えない", () => {
-    for (const result of results) {
-      const s = buildPageSummary(result);
-      expect(s.projected).toBeLessThanOrEqual(100);
-      expect(s.projected).toBeGreaterThanOrEqual(s.overall);
-    }
   });
 });
 

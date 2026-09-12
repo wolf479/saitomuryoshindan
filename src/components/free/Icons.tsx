@@ -2,7 +2,7 @@ import type { CheckStatus } from "@/lib/analyzer/types";
 
 type IconProps = { className?: string };
 
-export function CheckCircle({ className = "" }: IconProps) {
+function CheckCircle({ className = "" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
       <circle cx="12" cy="12" r="9" />
@@ -11,7 +11,7 @@ export function CheckCircle({ className = "" }: IconProps) {
   );
 }
 
-export function WarnTriangle({ className = "" }: IconProps) {
+function WarnTriangle({ className = "" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
       <path d="M12 3.5 2.8 19.5h18.4L12 3.5Z" strokeLinejoin="round" />
@@ -21,7 +21,7 @@ export function WarnTriangle({ className = "" }: IconProps) {
   );
 }
 
-export function FailCircle({ className = "" }: IconProps) {
+function FailCircle({ className = "" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
       <circle cx="12" cy="12" r="9" />
@@ -30,7 +30,7 @@ export function FailCircle({ className = "" }: IconProps) {
   );
 }
 
-export function InfoCircle({ className = "" }: IconProps) {
+function InfoCircle({ className = "" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
       <circle cx="12" cy="12" r="9" />
@@ -40,39 +40,11 @@ export function InfoCircle({ className = "" }: IconProps) {
   );
 }
 
-export function Sparkle({ className = "" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
-      <path d="M12 3v3M12 18v3M3 12h3M18 12h3" strokeLinecap="round" />
-      <path d="M12 7c.6 2.6 2.4 4.4 5 5-2.6.6-4.4 2.4-5 5-.6-2.6-2.4-4.4-5-5 2.6-.6 4.4-2.4 5-5Z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function Trash({ className = "" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
-      <path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M10 11v6M14 11v6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function Download({ className = "" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
       <path d="M12 4v11m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M4 17v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-
-export function Copy({ className = "" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
-      <rect x="9" y="9" width="11" height="11" rx="2" />
-      <path d="M5 15V6a2 2 0 0 1 2-2h9" strokeLinecap="round" />
     </svg>
   );
 }

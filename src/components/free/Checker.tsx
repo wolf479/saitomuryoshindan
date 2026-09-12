@@ -4,30 +4,25 @@
  * サイト診断（SEO・AIO）の画面。
  *
  * - フォーム・進捗・操作行は no-print、レポート本体（reportRef）だけを PDF 化する
- * - 診断は POST /api/site の NDJSON ストリーム（readNdjson 経由）。範囲はサイト全体に固定
+ * - 診断は POST /api/site の NDJSON ストリーム（readNdjson 経由）。範囲はサイト全体だけ
  * - 進捗・中止はここで持ち、描画は free/ の各セクションに任せる
  */
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Callout } from "@/components/ui";
-import type { AnalysisResult, SiteAnalysisResult, SiteProgress } from "@/lib/analyzer/types";
+import type { SiteAnalysisResult, SiteProgress } from "@/lib/analyzer/types";
 import { requestSiteAnalysis, SiteRequestError } from "@/lib/crawl/client";
 import { downloadPdf } from "@/lib/pdf/download";
 import { reportFileName } from "@/lib/report";
 import { DiagnosisForm } from "./DiagnosisForm";
 import { Download } from "./Icons";
-import { PageReport } from "./PageReport";
 import { ProgressPanel } from "./ProgressPanel";
 import { SiteReport } from "./SiteReport";
 
-/** 診断の範囲。画面から選ぶものではなく、常にサイト全体（全ページ）を診断する */
-type Mode = "page" | "site";
-
 type State =
   | { phase: "idle" }
-  | { phase: "loading"; mode: Mode; progress: SiteProgress | null }
+  | { phase: "loading"; progress: SiteProgress | null }
   | { phase: "error"; message: string }
-  | { phase: "done"; mode: "page"; result: AnalysisResult; cached: boolean; elapsedMs: number }
-  | { phase: "done"; mode: "site"; result: SiteAnalysisResult; cached: boolean; elapsedMs: number };
+  | { phase: "done"; result: SiteAnalysisResult; cached: boolean; elapsedMs: number };
 
 function messageOf(err: unknown): string {
   if (err instanceof SiteRequestError) return err.message;
@@ -43,27 +38,11 @@ export function Checker() {
   const [state, setState] = useState<State>({ phase: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [faqEnabled, setFaqEnabled] = useState(false);
   const [pdf, setPdf] = useState<"idle" | "working" | "failed">("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const reportRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const startedAtRef = useRef(0);
-
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/faq")
-      .then((r) => r.json())
-      .then((d) => {
-        if (alive) setFaqEnabled(Boolean(d.enabled));
-      })
-      .catch(() => {
-        if (alive) setFaqEnabled(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   // 診断中だけ経過時間を進める（no-print 領域なので PDF には影響しない）
   const loading = state.phase === "loading";
@@ -96,45 +75,23 @@ export function Checker() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    // 範囲を選ぶボタンは置いていないので、診断は必ずサイト全体
-    const current: Mode = "site";
     startedAtRef.current = Date.now();
     setElapsedMs(0);
-    setState({ phase: "loading", mode: current, progress: null });
+    setState({ phase: "loading", progress: null });
 
     try {
-      if (current === "site") {
-        const { result, cached } = await requestSiteAnalysis(target, {
-          signal: controller.signal,
-          onProgress: (progress) =>
-            setState((prev) => (prev.phase === "loading" ? { ...prev, progress } : prev)),
-        });
-        if (controller.signal.aborted) return;
-        setState({
-          phase: "done",
-          mode: "site",
-          result,
-          cached,
-          elapsedMs: Date.now() - startedAtRef.current,
-        });
-      } else {
-        const res = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ url: target }),
-          signal: controller.signal,
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "診断に失敗しました");
-        if (controller.signal.aborted) return;
-        setState({
-          phase: "done",
-          mode: "page",
-          result: data.result as AnalysisResult,
-          cached: Boolean(data.cached),
-          elapsedMs: Date.now() - startedAtRef.current,
-        });
-      }
+      const { result, cached } = await requestSiteAnalysis(target, {
+        signal: controller.signal,
+        onProgress: (progress) =>
+          setState((prev) => (prev.phase === "loading" ? { ...prev, progress } : prev)),
+      });
+      if (controller.signal.aborted) return;
+      setState({
+        phase: "done",
+        result,
+        cached,
+        elapsedMs: Date.now() - startedAtRef.current,
+      });
     } catch (err) {
       // 中止ボタン・画面離脱による中断はエラーとして扱わない
       if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) return;
@@ -157,11 +114,7 @@ export function Checker() {
   }
 
   const fileName =
-    state.phase !== "done"
-      ? ""
-      : state.mode === "site"
-        ? reportFileName("site", state.result.entryUrl, state.result.fetchedAt)
-        : reportFileName("page", state.result.page.finalUrl, state.result.page.fetchedAt);
+    state.phase === "done" ? reportFileName(state.result.entryUrl, state.result.fetchedAt) : "";
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8">
@@ -174,12 +127,7 @@ export function Checker() {
       />
 
       {state.phase === "loading" && (
-        <ProgressPanel
-          mode={state.mode}
-          progress={state.progress}
-          elapsedMs={elapsedMs}
-          onAbort={abort}
-        />
+        <ProgressPanel progress={state.progress} elapsedMs={elapsedMs} onAbort={abort} />
       )}
 
       {notice && state.phase !== "loading" && (
@@ -216,11 +164,7 @@ export function Checker() {
           </div>
 
           <div ref={reportRef} className="@container">
-            {state.mode === "page" ? (
-              <PageReport result={state.result} faqEnabled={faqEnabled} elapsedMs={state.elapsedMs} />
-            ) : (
-              <SiteReport result={state.result} elapsedMs={state.elapsedMs} />
-            )}
+            <SiteReport result={state.result} elapsedMs={state.elapsedMs} />
           </div>
         </>
       )}

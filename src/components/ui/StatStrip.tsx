@@ -1,15 +1,5 @@
 import type { ReactNode } from "react";
 
-export interface StatDelta {
-  /** 前期比の差分（表示は符号付き） */
-  value: number;
-  /** 単位や補足（例: "pt", "%"） */
-  unit?: string;
-  /** 増えるのが良い指標か（色の向き）。既定 true */
-  positiveIsGood?: boolean;
-  label?: string;
-}
-
 export interface StatStripItem {
   label: ReactNode;
   value: ReactNode;

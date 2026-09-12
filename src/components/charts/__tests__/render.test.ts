@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { palette } from "@/lib/ui/palette";
 import { Donut } from "../Donut";
 import { HBar } from "../HBar";
-import { HeatCell, heatCellClass, heatCellColors } from "../HeatCell";
+import { HeatCell, heatCellClass } from "../HeatCell";
 import { Histogram } from "../Histogram";
 import { Pie } from "../Pie";
 import { SegmentBar } from "../SegmentBar";
@@ -140,7 +140,7 @@ describe("HeatCell", () => {
   it("HeatCell は判定の地色 + 数値", () => {
     expect(heatCellClass(85)).toBe("bg-pass-soft");
     expect(heatCellClass(60)).toBe("bg-warn-soft");
-    expect(heatCellColors(10)).toEqual({ bg: palette.failSoft, fg: palette.ink });
+    expect(heatCellClass(10)).toBe("bg-fail-soft");
     const html = renderToStaticMarkup(createElement("table", null, createElement("tbody", null, createElement("tr", null, createElement(HeatCell, { score: 42 })))));
     expect(html).toContain("bg-fail-soft");
     expect(html).toContain(">42</td>");

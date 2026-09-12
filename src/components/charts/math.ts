@@ -34,24 +34,6 @@ export function donutDash(value: number, max: number, circ: number): { dasharray
 }
 
 /**
- * ストロークの円弧 path（塗り無し）。startDeg → endDeg（時計回り）。
- * 360° 以上は 2 本の半円に分けて描く（1 本の A では円が描けないため）。
- */
-export function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
-  const sweep = endDeg - startDeg;
-  if (sweep <= 0) return "";
-  if (sweep >= 360) {
-    const top = polarToCartesian(cx, cy, r, 0);
-    const bottom = polarToCartesian(cx, cy, r, 180);
-    return `M ${top.x} ${top.y} A ${r} ${r} 0 1 1 ${bottom.x} ${bottom.y} A ${r} ${r} 0 1 1 ${top.x} ${top.y}`;
-  }
-  const s = polarToCartesian(cx, cy, r, startDeg);
-  const e = polarToCartesian(cx, cy, r, endDeg);
-  const large = sweep > 180 ? 1 : 0;
-  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
-}
-
-/**
  * 塗りつぶしの扇形（rInner > 0 なら環状）。ドーナツ / 円グラフの 1 区分。
  */
 export function ringSegmentPath(
@@ -125,8 +107,6 @@ export function niceMax(max: number, steps = 4): number {
   const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10;
   return round(nice * magnitude * steps, 6);
 }
-
-
 
 /** 百分率の表示（合計 100 になるよう最大剰余法で丸める） */
 export function percentages(values: readonly number[]): number[] {

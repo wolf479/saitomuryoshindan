@@ -67,31 +67,6 @@ export interface Improvement {
   spread?: "uniform" | "mixed";
 }
 
-export interface ReportSummaryBase {
-  overall: number;
-  grade: GradeInfo;
-  counts: StatusCounts;
-  categories: CategoryRow[];
-  /** 最も評価が高い / 低いカテゴリ（同点は CATEGORY_ORDER の先頭） */
-  best: CategoryRow;
-  worst: CategoryRow;
-  /** 優先改善の全件（見込み加点の降順）。画面側は任意の件数で切って使う */
-  improvements: Improvement[];
-  /** improvements の先頭 3 件 */
-  top3: Improvement[];
-  /** TOP3 に対応したときの見込み総合スコア（100 で頭打ち） */
-  projected: number;
-  projectedGrade: GradeInfo;
-  /** 講評（2〜3 行） */
-  commentary: CommentaryLine[];
-}
-
-export interface PageReportSummary extends ReportSummaryBase {
-  mode: "page";
-  /** 未対応（fail）の項目ラベル */
-  failedLabels: string[];
-}
-
 /** ページ別スコア分布の 1 区分（A〜E） */
 export interface ScoreBand {
   grade: Grade;
@@ -137,8 +112,24 @@ export interface PriorityItem {
   secondary: number;
 }
 
-export interface SiteReportSummary extends ReportSummaryBase {
-  mode: "site";
+/** サイト全体（全ページ）のレポートサマリー。画面が描くのはこれだけ */
+export interface SiteReportSummary {
+  overall: number;
+  grade: GradeInfo;
+  counts: StatusCounts;
+  categories: CategoryRow[];
+  /** 最も評価が高い / 低いカテゴリ（同点は CATEGORY_ORDER の先頭） */
+  best: CategoryRow;
+  worst: CategoryRow;
+  /** 優先改善の全件（見込み加点の降順）。画面側は任意の件数で切って使う */
+  improvements: Improvement[];
+  /** improvements の先頭 3 件 */
+  top3: Improvement[];
+  /** TOP3 に対応したときの見込み総合スコア（100 で頭打ち） */
+  projected: number;
+  projectedGrade: GradeInfo;
+  /** 講評（2〜3 行） */
+  commentary: CommentaryLine[];
   pageCount: number;
   bestPage: RankedPage;
   worstPage: RankedPage;
@@ -157,4 +148,3 @@ export interface SiteReportSummary extends ReportSummaryBase {
   priorities: PriorityItem[];
 }
 
-export type ReportSummary = PageReportSummary | SiteReportSummary;

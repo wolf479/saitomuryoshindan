@@ -79,9 +79,9 @@ export function truncateMiddle(text: string, max = 64): string {
  *
  * 日本語を含めると、ブラウザによっては <a download> の名前が捨てられて
  * "download" というファイルになってしまうため、ASCII だけで組み立てる。
- * 例: aio-report_example.com_20260906 / aio-report-site_example.com_20260906
+ * 例: aio-report-site_example.com_20260906
  */
-export function reportFileName(mode: "page" | "site", target: string, at: string): string {
+export function reportFileName(target: string, at: string): string {
   let host = target;
   try {
     host = new URL(target).hostname || target;
@@ -93,5 +93,5 @@ export function reportFileName(mode: "page" | "site", target: string, at: string
   const stamp = Number.isNaN(d.getTime())
     ? ""
     : `_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
-  return `aio-report${mode === "site" ? "-site" : ""}_${safeHost}${stamp}`;
+  return `aio-report-site_${safeHost}${stamp}`;
 }

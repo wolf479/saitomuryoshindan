@@ -1,15 +1,14 @@
 /**
  * 優先改善 TOP3 の表（design-spec §3.2-1 / §3.3-1）。
  * 独立したセクションではなく「1. 総合評価」の右列、講評の下に置く。
- * 列は # / 改善項目 / カテゴリ / 見込み効果（site はさらに 該当ページ）。
+ * 列は # / 改善項目 / カテゴリ / 見込み効果 / 該当ページ。
  * 各項目の根拠と対応方法は「改善提案（詳細）」に出るため、ここでは並べない。
  */
 import { DataTable, type Column } from "@/components/ui";
-import { fmt, type Improvement, type ReportSummary } from "@/lib/report";
+import { fmt, type Improvement, type SiteReportSummary } from "@/lib/report";
 import { EmptyLine, SubHeading } from "./report-parts";
 
-export function TopImprovementsTable({ summary }: { summary: ReportSummary }) {
-  const isSite = summary.mode === "site";
+export function TopImprovementsTable({ summary }: { summary: SiteReportSummary }) {
   const items = summary.top3;
 
   const columns: Column<Improvement>[] = [
@@ -41,19 +40,17 @@ export function TopImprovementsTable({ summary }: { summary: ReportSummary }) {
       render: (r) => <span className="font-bold text-accent">{r.gainLabel}</span>,
     },
   ];
-  if (isSite) {
-    columns.push({
-      key: "pages",
-      header: "該当ページ",
-      align: "right",
-      width: "5.5rem",
-      nowrap: true,
-      render: (r) =>
-        r.affectedPages === undefined || r.totalPages === undefined
-          ? "—"
-          : `${fmt(r.affectedPages)} / ${fmt(r.totalPages)}`,
-    });
-  }
+  columns.push({
+    key: "pages",
+    header: "該当ページ",
+    align: "right",
+    width: "5.5rem",
+    nowrap: true,
+    render: (r) =>
+      r.affectedPages === undefined || r.totalPages === undefined
+        ? "—"
+        : `${fmt(r.affectedPages)} / ${fmt(r.totalPages)}`,
+  });
 
   return (
     <>
@@ -67,7 +64,7 @@ export function TopImprovementsTable({ summary }: { summary: ReportSummary }) {
           rowKey={(r) => r.id}
           dense
           stickyHeader={false}
-          minWidth={isSite ? "26rem" : "20rem"}
+          minWidth="26rem"
         />
       )}
     </>

@@ -11,10 +11,7 @@
 import {
   CATEGORY_LABELS,
   CATEGORY_WEIGHTS,
-  type AnalysisResult,
   type CategoryId,
-  type CategoryScore,
-  type CheckResult,
   type CheckStatus,
   type SiteAnalysisResult,
   type SiteCheckSummary,
@@ -29,7 +26,6 @@ import type {
   CommentaryLine,
   CommentaryPart,
   Improvement,
-  PageReportSummary,
   PriorityItem,
   RankedPage,
   ScoreBand,
@@ -43,9 +39,6 @@ import type {
 
 /** 深刻な順。並べ替えの副キーに使う */
 const STATUS_SEVERITY: readonly CheckStatus[] = ["fail", "warn", "info", "pass"];
-
-/** 判定 → 獲得率（analyzer/check.ts と同じ値。earned が欠けた入力の補完に使う） */
-const EARN_RATIO: Record<CheckStatus, number> = { pass: 1, warn: 0.5, fail: 0, info: 0 };
 
 function severityIndex(status: CheckStatus): number {
   const i = STATUS_SEVERITY.indexOf(status);
@@ -141,100 +134,6 @@ function spreadIndex(spread: "uniform" | "mixed" | undefined): number {
 // ---------------------------------------------------------------------------
 // PAGE モード
 // ---------------------------------------------------------------------------
-
-/** 未獲得の配点（合格にしたときに増える分） */
-function missingWeight(check: CheckResult): number {
-  const weight = Number.isFinite(check.weight) ? Math.max(0, check.weight) : 0;
-  const earned = Number.isFinite(check.earned) ? check.earned : weight * EARN_RATIO[check.status];
-  return Math.max(0, weight - earned);
-}
-
-/**
- * 項目 c を合格にしたときの総合スコアの増分。
- * gain = (weight − earned) / Σweight(k) × CATEGORY_WEIGHTS[k]（design-spec §3.4）
- */
-function pageImprovements(categories: CategoryScore[]): Improvement[] {
-  const list: Improvement[] = [];
-  for (const category of categories) {
-    const id = category.id;
-    const checks = category.checks ?? [];
-    const total = checks.reduce(
-      (sum, c) => sum + (Number.isFinite(c.weight) ? Math.max(0, c.weight) : 0),
-      0,
-    );
-    const categoryWeight = CATEGORY_WEIGHTS[id] ?? 0;
-    for (const c of checks) {
-      if (c.status !== "fail" && c.status !== "warn") continue;
-      const gain = total > 0 ? (missingWeight(c) / total) * categoryWeight : 0;
-      list.push({
-        id: c.id,
-        label: c.label,
-        category: id,
-        categoryLabel: CATEGORY_LABELS[id] ?? id,
-        status: c.status,
-        gain,
-        gainLabel: gainLabelOf(gain),
-        evidence: c.evidence,
-        advice: c.advice,
-      });
-    }
-  }
-  return list.sort(compareImprovements);
-}
-
-/** ページ 1 枚分のレポートサマリー */
-export function buildPageSummary(result: AnalysisResult): PageReportSummary {
-  const categories = result.categories ?? [];
-  const checks = categories.flatMap((c) => c.checks ?? []);
-
-  const map = emptyStatusMap();
-  for (const c of checks) {
-    if (c.status in map) map[c.status] += 1;
-  }
-  const counts = toStatusCounts(map);
-
-  const scoreById = new Map<CategoryId, number>();
-  for (const c of categories) scoreById.set(c.id, c.score);
-  const rows = CATEGORY_ORDER.filter((id) => scoreById.has(id)).map((id) =>
-    categoryRow(id, scoreById.get(id) ?? 0),
-  );
-
-  const overall = clampScore(result.overall);
-  const grade = gradeOf(overall);
-  const improvements = pageImprovements(categories);
-  const top3 = improvements.slice(0, 3);
-  const projected = clampScore(overall + top3.reduce((sum, i) => sum + i.gain, 0));
-  const projectedGrade = gradeOf(projected);
-  const best = rows.length > 0 ? bestRow(rows) : fallbackRow();
-  const worst = rows.length > 0 ? worstRow(rows) : fallbackRow();
-
-  return {
-    mode: "page",
-    overall,
-    grade,
-    counts,
-    categories: rows,
-    best,
-    worst,
-    improvements,
-    top3,
-    projected,
-    projectedGrade,
-    commentary: buildCommentary({
-      mode: "page",
-      overall,
-      grade,
-      categories: rows,
-      best,
-      worst,
-      counts,
-      top3,
-      projected,
-      projectedGrade,
-    }),
-    failedLabels: improvements.filter((i) => i.status === "fail").map((i) => i.label),
-  };
-}
 
 // ---------------------------------------------------------------------------
 // SITE モード
@@ -543,7 +442,6 @@ export function buildSiteSummary(result: SiteAnalysisResult): SiteReportSummary 
       : fallback;
 
   return {
-    mode: "site",
     overall,
     grade,
     counts,
@@ -555,7 +453,6 @@ export function buildSiteSummary(result: SiteAnalysisResult): SiteReportSummary 
     projected,
     projectedGrade,
     commentary: buildCommentary({
-      mode: "site",
       overall,
       grade,
       categories: rows,
@@ -592,7 +489,6 @@ export function buildSiteSummary(result: SiteAnalysisResult): SiteReportSummary 
 // ---------------------------------------------------------------------------
 
 interface CommentaryInput {
-  mode: "page" | "site";
   overall: number;
   grade: GradeInfo;
   categories: CategoryRow[];
@@ -602,27 +498,21 @@ interface CommentaryInput {
   top3: Improvement[];
   projected: number;
   projectedGrade: GradeInfo;
-  pageCount?: number;
-  uniformFailCount?: number;
+  pageCount: number;
+  uniformFailCount: number;
   truncated?: SiteCrawlTruncation | null;
 }
 
 function buildCommentary(input: CommentaryInput): CommentaryLine[] {
-  const { mode, overall, grade, categories, best, worst, counts, top3 } = input;
-  const isSite = mode === "site";
-  const pageCount = input.pageCount ?? 1;
+  const { overall, grade, categories, best, worst, counts, top3, pageCount } = input;
 
-  if (isSite && pageCount === 0) {
+  if (pageCount === 0) {
     return [["診断できたページがありません。URL とサイトの公開状態をご確認ください。"]];
   }
 
   // 1 行目: 現状
   const current: CommentaryLine = [];
-  if (isSite) {
-    current.push(numPart(pageCount), pageCount > 1 ? " ページの平均で総合 " : " ページを診断し、総合 ");
-  } else {
-    current.push("総合 ");
-  }
+  current.push(numPart(pageCount), pageCount > 1 ? " ページの平均で総合 " : " ページを診断し、総合 ");
   current.push(numPart(overall), ` 点・${grade.grade}（${grade.label}）です。`);
   if (categories.length > 0) {
     current.push(
@@ -633,7 +523,7 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
     );
   }
   const truncated = input.truncated;
-  if (isSite && truncated?.reason === "max-pages") {
+  if (truncated?.reason === "max-pages") {
     current.push(
       "上限 ",
       numPart(truncated.limit),
@@ -641,7 +531,7 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
       numPart(pageCount),
       " ページ分の集計です。",
     );
-  } else if (isSite && truncated?.reason === "time-budget") {
+  } else if (truncated?.reason === "time-budget") {
     current.push("制限時間で打ち切ったため、", numPart(pageCount), " ページ分の集計です。");
   }
 
@@ -652,12 +542,10 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
 
   // 端ケース: 未対応も改善余地も無い（褒める）
   if (counts.fail === 0 && counts.warn === 0) {
-    const praise: CommentaryLine = isSite
-      ? [
-          numPart(pageCount),
-          " ページのすべてで主要項目を満たしています。未対応・改善余地のある判定はありません。",
-        ]
-      : ["主要項目はすべて満たしています。未対応・改善余地のある項目はありません。"];
+    const praise: CommentaryLine = [
+      numPart(pageCount),
+      " ページのすべてで主要項目を満たしています。未対応・改善余地のある判定はありません。",
+    ];
     const next: CommentaryLine =
       counts.info > 0
         ? [
@@ -671,9 +559,9 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
 
   // 2 行目: 課題。サイトで「全ページ共通の未対応」があればそちらを優先する
   const issue: CommentaryLine = [];
-  const uniformFailCount = input.uniformFailCount ?? 0;
+  const uniformFailCount = input.uniformFailCount;
   // 「全ページ共通」はページが 2 枚以上あるときだけ意味を持つ
-  if (isSite && pageCount > 1 && uniformFailCount > 0) {
+  if (pageCount > 1 && uniformFailCount > 0) {
     issue.push(
       "全 ",
       numPart(pageCount),
@@ -683,8 +571,8 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
     );
   } else {
     issue.push(`最も低いのは${worst.label}（`, numPart(worst.score), " 点）で、");
-    const unit = isSite ? "件" : "項目";
-    const tail = isSite ? "の判定があります。" : "があります。";
+    const unit = "件";
+    const tail = "の判定があります。";
     if (counts.fail > 0 && counts.warn > 0) {
       issue.push(
         "未対応 ",

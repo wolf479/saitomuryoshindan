@@ -13,7 +13,6 @@ import {
 import { GRADE_BANDS } from "@/lib/ui/grade";
 import { palette } from "@/lib/ui/palette";
 import { Num, ReportSection, SubHeading } from "./report-parts";
-import { ServiceGuideButton } from "./ServiceGuideButton";
 import { BRAND } from "@/lib/brand";
 
 const TH = "border-b border-line px-2 py-2 text-left text-[12px] font-bold text-muted";
@@ -213,7 +212,6 @@ export function NextSteps() {
             </a>
           )}
         </p>
-        <ServiceGuideButton className="no-print mt-3" />
       </div>
     </section>
   );

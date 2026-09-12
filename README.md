@@ -97,7 +97,6 @@ npm run dev                  # http://localhost:3000
 | `SITE_MAX_PAGES` | 任意 | サイト全体モードのページ数上限（既定 300、最大 1000） |
 | `NEXT_PUBLIC_APP_VERSION` | 任意 | フッターのバージョン表記 |
 | `NEXT_PUBLIC_CONTACT_NAME` / `NEXT_PUBLIC_CONTACT_URL` | 任意 | レポート末尾「次のステップ」に出す運営元の連絡先 |
-| `NEXT_PUBLIC_SERVICE_GUIDE_URL` | 任意 | 配布するサービス資料のファイル。未設定ならその場で PDF を組み立てる |
 | `ALLOW_PRIVATE_HOSTS` | 開発用 | localhost や LAN 内のサイトを診断したいときだけ `1`。**本番では絶対に設定しない** |
 
 ---
@@ -131,6 +130,7 @@ src/
     report/             # レポートの導出（グレード・講評・優先改善）
     faq/                # 想定 FAQ の生成
     free/ratelimit.ts   # FAQ 生成の回数制限
+    pdf/                # レポートの PDF 化（html2canvas + jsPDF）
     brand.ts            # サービスの呼び名（唯一の定義）
     ui/                 # 色トークンの単一定義（palette.ts / grade.ts）
 ```
@@ -152,8 +152,6 @@ src/
 - 診断対象サイトへ送る User-Agent（`src/lib/analyzer/fetch.ts` の `USER_AGENT`）に、提供元が特定できる URL やリポジトリ名を入れない。相手のアクセスログに残ります
 - 画面に出る唯一の外部向け連絡先は `NEXT_PUBLIC_CONTACT_NAME` / `NEXT_PUBLIC_CONTACT_URL`。**運営元自身のもの**を設定してください（未設定なら、そのブロックごと表示されません）
 
-サービス資料の PDF は `NEXT_PUBLIC_SERVICE_GUIDE_URL` で自社のファイルに差し替えられます。未設定のときに組み立てられる既定の資料は、掲載するツール一覧と料金が `src/lib/features/registry.ts` / `src/lib/plans/catalog.ts` の値なので、**自社で提供する内容に合わせて書き換えてから公開してください**。
-
 ---
 
 ## 入っていないもの
@@ -161,10 +159,9 @@ src/
 - ログイン（Clerk）・課金（Stripe）・Supabase への保存
 - `/tools/*` のツール群、`/settings`、`/admin`
 - 外部サービスへの案内ページ（`/plans`・`/sign-up`）
+- サービス資料の PDF（機能一覧・料金プランの掲載）
 - MEO（Google マップ・店舗情報）の診断 — 扱いません
 - 利用規約・プライバシーポリシー・特商法表記のページ（**公開して使う場合はご自身で用意してください**）
-
-機能の定義（`src/lib/features/registry.ts`）と料金プラン（`src/lib/plans/catalog.ts`）は、サービス資料の PDF を組み立てるために持っています。
 
 ---
 

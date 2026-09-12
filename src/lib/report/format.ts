@@ -75,8 +75,7 @@ export function truncateMiddle(text: string, max = 64): string {
 }
 
 /**
- * PDF のファイル名。ダウンロード時のファイル名と、印刷して「PDF に保存」
- * したときの既定ファイル名（document.title から作られる）の両方に使う。
+ * PDF のファイル名（「PDFでダウンロード」で保存されるときの名前）。
  *
  * 日本語を含めると、ブラウザによっては <a download> の名前が捨てられて
  * "download" というファイルになってしまうため、ASCII だけで組み立てる。

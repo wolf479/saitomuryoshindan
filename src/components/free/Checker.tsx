@@ -4,8 +4,8 @@
  * サイト診断（SEO・AIO）の画面。
  *
  * - フォーム・進捗・操作行は no-print、レポート本体（reportRef）だけを PDF 化する
- * - page は POST /api/analyze、site は POST /api/site の NDJSON ストリーム（readNdjson 経由）
- * - 診断範囲・進捗・中止はここで持ち、描画は free/ の各セクションに任せる
+ * - 診断は POST /api/site の NDJSON ストリーム（readNdjson 経由）。範囲はサイト全体に固定
+ * - 進捗・中止はここで持ち、描画は free/ の各セクションに任せる
  */
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Callout } from "@/components/ui";
@@ -13,11 +13,14 @@ import type { AnalysisResult, SiteAnalysisResult, SiteProgress } from "@/lib/ana
 import { requestSiteAnalysis, SiteRequestError } from "@/lib/crawl/client";
 import { downloadPdf } from "@/lib/pdf/download";
 import { reportFileName } from "@/lib/report";
-import { DiagnosisForm, type Mode } from "./DiagnosisForm";
+import { DiagnosisForm } from "./DiagnosisForm";
 import { Download } from "./Icons";
 import { PageReport } from "./PageReport";
 import { ProgressPanel } from "./ProgressPanel";
 import { SiteReport } from "./SiteReport";
+
+/** 診断の範囲。画面から選ぶものではなく、常にサイト全体（全ページ）を診断する */
+type Mode = "page" | "site";
 
 type State =
   | { phase: "idle" }
@@ -37,7 +40,6 @@ function messageOf(err: unknown): string {
 
 export function Checker() {
   const [url, setUrl] = useState("");
-  const [mode, setMode] = useState<Mode>("page");
   const [state, setState] = useState<State>({ phase: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -94,7 +96,8 @@ export function Checker() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    const current = mode;
+    // 範囲を選ぶボタンは置いていないので、診断は必ずサイト全体
+    const current: Mode = "site";
     startedAtRef.current = Date.now();
     setElapsedMs(0);
     setState({ phase: "loading", mode: current, progress: null });
@@ -165,8 +168,6 @@ export function Checker() {
       <DiagnosisForm
         url={url}
         onUrlChange={setUrl}
-        mode={mode}
-        onModeChange={setMode}
         onSubmit={onSubmit}
         busy={state.phase === "loading"}
         error={formError}

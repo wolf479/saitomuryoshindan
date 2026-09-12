@@ -3,7 +3,7 @@
 /**
  * 想定 FAQ（AI 生成）。レポートの中の任意セクション。
  *
- * 挙動と API 契約（POST /api/faq、下書きの localStorage キー）は従来のまま。
+ * 挙動と API 契約（POST /api/faq）は従来のまま。
  * 見た目だけ新しいレポートのトークンに合わせ、編集 UI は no-print にしてある。
  */
 import { useCallback, useMemo, useState } from "react";
@@ -16,7 +16,11 @@ import { ReportSection, SubHeading } from "./report-parts";
 
 type Phase = "idle" | "loading" | "editing";
 
-const DRAFT_KEY_PREFIX = "seo-checker:faq-draft:";
+/**
+ * FAQ 下書きの localStorage キー。
+ * DevTools を開けば利用者に見えるので、OEM 提供元が分かる名前は入れない。
+ */
+const DRAFT_KEY_PREFIX = "faq-draft:";
 
 function newId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto

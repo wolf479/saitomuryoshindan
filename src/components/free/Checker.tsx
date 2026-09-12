@@ -14,7 +14,7 @@ import { requestSiteAnalysis, SiteRequestError } from "@/lib/crawl/client";
 import { downloadPdf } from "@/lib/pdf/download";
 import { reportFileName } from "@/lib/report";
 import { DiagnosisForm, type Mode } from "./DiagnosisForm";
-import { Download, Printer } from "./Icons";
+import { Download } from "./Icons";
 import { PageReport } from "./PageReport";
 import { ProgressPanel } from "./ProgressPanel";
 import { SiteReport } from "./SiteReport";
@@ -25,20 +25,6 @@ type State =
   | { phase: "error"; message: string }
   | { phase: "done"; mode: "page"; result: AnalysisResult; cached: boolean; elapsedMs: number }
   | { phase: "done"; mode: "site"; result: SiteAnalysisResult; cached: boolean; elapsedMs: number };
-
-/** 印刷ダイアログから「PDF に保存」したときの既定ファイル名を合わせる */
-function printAsPdf(title: string) {
-  const original = document.title;
-  const restore = () => {
-    document.title = original;
-    window.removeEventListener("afterprint", restore);
-  };
-  window.addEventListener("afterprint", restore);
-  document.title = title;
-  window.print();
-  // afterprint が発火しないブラウザ向けの保険
-  setTimeout(restore, 10_000);
-}
 
 function messageOf(err: unknown): string {
   if (err instanceof SiteRequestError) return err.message;
@@ -221,17 +207,9 @@ export function Checker() {
             >
               {pdf === "working" ? "PDF を作成中…" : "PDFでダウンロード"}
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => printAsPdf(fileName)}
-              icon={<Printer className="h-4 w-4" />}
-            >
-              印刷
-            </Button>
             {pdf === "failed" && (
               <p className="w-full text-right text-[12px] text-fail" role="alert">
-                PDF を作成できませんでした。「印刷」から、送信先を「PDF に保存」にしてお試しください。
+                PDF を作成できませんでした。時間をおいて、もう一度お試しください。
               </p>
             )}
           </div>

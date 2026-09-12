@@ -6,7 +6,7 @@
   vitest（src/lib/ui/__tests__/palette.test.ts）が一致を検証する。
   紫（元ツール #5b4de0）系は定義しない。
 
-  ライト基調の SaaS トーン。ブランド色はティール（健診＝医療・検査の連想）。
+  ライト基調の SaaS トーン。ブランド色はロゴと同じネイビー、アクセントはティール。
   chart-1〜6 はカテゴリ識別用で、色覚多様性を含む識別性を検証して選んである
   （明度帯・彩度下限・隣接ペアの ΔE・地色とのコントラスト比をすべて満たす）。
 */
@@ -16,9 +16,9 @@
   --color-ink: #111c22;
   --color-muted: #5a6a75;
   --color-line: #e2e8ec;
-  --color-brand: #0b4f4a;
+  --color-brand: #1b3a63;
   --color-on-brand: #ffffff;
-  --color-on-brand-muted: #a8cdc8;
+  --color-on-brand-muted: #a9bcd4;
   --color-accent: #00786d;
   --color-accent-strong: #005f56;
   --color-accent-soft: #e3f3f0;

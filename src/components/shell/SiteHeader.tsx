@@ -16,9 +16,8 @@ export function SiteHeader() {
           href="/"
           className="flex min-w-0 items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-on-brand">
-            <LogoMark className="h-5 w-5" />
-          </span>
+          {/* ロゴは 2 色のまま置く（地色を敷くと線画が潰れる） */}
+          <LogoMark className="h-10 w-10 shrink-0" />
           <span className="min-w-0">
             <span className="block truncate text-[15px] font-bold leading-tight tracking-tight text-ink">
               {BRAND.name}

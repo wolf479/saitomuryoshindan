@@ -16,8 +16,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     lang: "ja",
     background_color: "#f6f8f9",
-    // ヘッダーのロゴ地と同じブランド色。アドレスバーの色もこれに合う
-    theme_color: "#0b4f4a",
+    // ロゴと同じネイビー。アドレスバーの色もこれに合う
+    theme_color: "#1b3a63",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

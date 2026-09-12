@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CATEGORY_LABELS,
   CATEGORY_WEIGHTS,
-  type AnalysisResult,
   type CategoryId,
-  type CategoryScore,
-  type CheckResult,
   type CheckStatus,
   type PageSnapshot,
   type SiteAnalysisResult,
@@ -13,7 +10,7 @@ import {
   type SiteCheckSummary,
   type SitePageResult,
 } from "@/lib/analyzer/types";
-import { buildPageSummary, buildSiteSummary } from "../summary";
+import { buildSiteSummary } from "../summary";
 import type { CommentaryLine } from "../types";
 import { CATEGORY_ORDER } from "../weights";
 
@@ -35,55 +32,6 @@ const SNAPSHOT: PageSnapshot = {
   h1Count: 1,
   fetchedAt: "2026-09-06T05:00:00.000Z",
 };
-
-function mkCheck(
-  id: string,
-  category: CategoryId,
-  status: CheckStatus,
-  weight: number,
-  extra: Partial<CheckResult> = {},
-): CheckResult {
-  const w = status === "info" ? 0 : weight;
-  const earned = status === "pass" ? w : status === "warn" ? w / 2 : 0;
-  return { id, category, status, label: `${id} のラベル`, weight: w, earned, ...extra };
-}
-
-/** analyzer/scoring.ts と同じ計算でカテゴリを組み立てる */
-function mkCategories(checks: CheckResult[]): CategoryScore[] {
-  return CATEGORY_ORDER.map((id) => {
-    const own = checks.filter((c) => c.category === id);
-    const total = own.reduce((s, c) => s + c.weight, 0);
-    const earned = own.reduce((s, c) => s + c.earned, 0);
-    return {
-      id,
-      label: CATEGORY_LABELS[id],
-      score: total === 0 ? 100 : Math.round((earned / total) * 100),
-      checks: own,
-    };
-  });
-}
-
-function overallOf(categories: CategoryScore[]): number {
-  const weighted = categories.reduce((s, c) => s + c.score * CATEGORY_WEIGHTS[c.id], 0);
-  const total = categories.reduce((s, c) => s + CATEGORY_WEIGHTS[c.id], 0);
-  return total === 0 ? 0 : Math.round(weighted / total);
-}
-
-function mkPage(checks: CheckResult[]): AnalysisResult {
-  const categories = mkCategories(checks);
-  return { page: SNAPSHOT, exclusion: null, overall: overallOf(categories), categories, notes: [] };
-}
-
-/** 総合スコアだけを指定したページ結果（グレード閾値の検証用） */
-function pageWithOverall(overall: number): AnalysisResult {
-  return {
-    page: SNAPSHOT,
-    exclusion: null,
-    overall,
-    categories: mkCategories([mkCheck("title", "meta", "pass", 3)]),
-    notes: [],
-  };
-}
 
 function mkSitePage(
   url: string,
@@ -179,216 +127,6 @@ const lineText = (line: CommentaryLine): string =>
   line.map((p) => (typeof p === "string" ? p : p.num)).join("");
 const lineNums = (line: CommentaryLine): string[] =>
   line.flatMap((p) => (typeof p === "string" ? [] : [p.num]));
-
-// ---------------------------------------------------------------------------
-// PAGE モード
-// ---------------------------------------------------------------------------
-
-describe("buildPageSummary", () => {
-  const mixed = mkPage([
-    mkCheck("title", "meta", "pass", 3),
-    mkCheck("description", "meta", "warn", 3),
-    mkCheck("canonical", "meta", "fail", 1),
-    mkCheck("lang", "meta", "pass", 1),
-    mkCheck("jsonld-search-action", "structuredData", "info", 0),
-  ]);
-
-  it("判定の件数は項目ごとに数える", () => {
-    expect(buildPageSummary(mixed).counts).toEqual({
-      pass: 2,
-      warn: 1,
-      fail: 1,
-      info: 1,
-      scored: 4,
-    });
-  });
-
-  it("カテゴリ行は CATEGORY_ORDER 順・配点付きで、判定とグレードを持つ", () => {
-    const s = buildPageSummary(mixed);
-    expect(s.categories.map((c) => c.id)).toEqual([...CATEGORY_ORDER]);
-    expect(s.categories.map((c) => c.weight)).toEqual([20, 25, 20, 15, 20]);
-    const meta = s.categories.find((c) => c.id === "meta");
-    // 配点 8 のうち獲得 5.5 → 69 点
-    expect(meta?.score).toBe(69);
-    expect(meta?.tone).toBe("warn");
-    expect(meta?.grade.grade).toBe("C");
-    expect(s.worst.id).toBe("meta");
-    // 同点（100 点）のカテゴリは CATEGORY_ORDER の先頭を採用する
-    expect(s.best.id).toBe("crawlers");
-  });
-
-  it("優先改善は見込み加点の降順。配点の小さい未対応は大きい未対応より下になる", () => {
-    const s = buildPageSummary(
-      mkPage([
-        // crawlers: 配点計 5 のうち 3 が未対応 → 3 / 5 × 20 = 12 点
-        mkCheck("ai-crawlers-allowed", "crawlers", "fail", 3),
-        mkCheck("noindex", "crawlers", "pass", 2),
-        // meta: 配点計 10 のうち 1 が未対応 → 1 / 10 × 20 = 2 点
-        mkCheck("canonical", "meta", "fail", 1),
-        mkCheck("title", "meta", "pass", 3),
-        mkCheck("description", "meta", "pass", 3),
-        mkCheck("ogp", "meta", "pass", 2),
-        mkCheck("lang", "meta", "pass", 1),
-      ]),
-    );
-    expect(s.top3.map((i) => i.id)).toEqual(["ai-crawlers-allowed", "canonical"]);
-    expect(s.top3[0].gain).toBeCloseTo(12, 6);
-    expect(s.top3[0].gainLabel).toBe("+12 点");
-    expect(s.top3[0].categoryLabel).toBe(CATEGORY_LABELS.crawlers);
-    expect(s.top3[1].gainLabel).toBe("+2 点");
-    // 見込み総合 = 現状 + TOP3 の加点
-    expect(s.projected).toBe(s.overall + 14);
-  });
-
-  it("同点は 未対応 → CATEGORY_ORDER → id の順で並ぶ", () => {
-    const s = buildPageSummary(
-      mkPage([
-        // crawlers（配点計 10）: 改善余地 4 → 2 / 10 × 20 = 4 点
-        mkCheck("c-warn", "crawlers", "warn", 4),
-        mkCheck("c-pass", "crawlers", "pass", 6),
-        // meta（配点計 10）: 未対応 2 → 2 / 10 × 20 = 4 点（同点だが未対応が上）
-        mkCheck("m-fail", "meta", "fail", 2),
-        mkCheck("m-pass", "meta", "pass", 8),
-        // headings（配点計 10）: 未対応 2 が 2 件 → どちらも 3 点。id 昇順
-        mkCheck("b-fail", "headings", "fail", 2),
-        mkCheck("a-fail", "headings", "fail", 2),
-        mkCheck("h-pass", "headings", "pass", 6),
-      ]),
-    );
-    expect(s.improvements.map((i) => i.id)).toEqual(["m-fail", "c-warn", "a-fail", "b-fail"]);
-    expect(s.top3).toHaveLength(3);
-    expect(s.improvements.length).toBeGreaterThan(s.top3.length);
-    // 未対応の項目は見込み加点の順で返す
-    expect(s.failedLabels).toEqual([
-      "m-fail のラベル",
-      "a-fail のラベル",
-      "b-fail のラベル",
-    ]);
-  });
-
-  it("四捨五入して 0 になる見込み加点は「+1 点未満」", () => {
-    const checks = [mkCheck("image-alt", "content", "fail", 1)];
-    for (let i = 0; i < 99; i += 1) {
-      checks.push(mkCheck(`filler-${i}`, "content", "pass", 1));
-    }
-    const s = buildPageSummary(mkPage(checks));
-    // 1 / 100 × 20 = 0.2 点
-    expect(s.top3[0].gain).toBeCloseTo(0.2, 6);
-    expect(s.top3[0].gainLabel).toBe("+1 点未満");
-  });
-
-  it.each([
-    [100, "A"],
-    [90, "A"],
-    [89, "B"],
-    [80, "B"],
-    [79, "C"],
-    [65, "C"],
-    [64, "D"],
-    [50, "D"],
-    [49, "E"],
-    [0, "E"],
-  ])("総合 %i 点はグレード %s", (overall, grade) => {
-    expect(buildPageSummary(pageWithOverall(overall)).grade.grade).toBe(grade);
-  });
-
-  it("講評は 3 行で、数値は { num } のパートに分かれている", () => {
-    const s = buildPageSummary(mixed);
-    expect(s.commentary).toHaveLength(3);
-    // 1 行目の文字列パートには数字を直接埋め込まない
-    for (const part of s.commentary[0]) {
-      if (typeof part === "string") expect(part).not.toMatch(/\d/);
-    }
-    expect(lineNums(s.commentary[0])).toContain(String(s.overall));
-    expect(lineText(s.commentary[0])).toContain(
-      `総合 ${s.overall} 点・${s.grade.grade}（${s.grade.label}）です。`,
-    );
-    expect(lineText(s.commentary[0])).toContain("5 カテゴリで最も評価が高いのは");
-    expect(lineText(s.commentary[1])).toBe(
-      `最も低いのは${CATEGORY_LABELS.meta}（69 点）で、未対応 1 項目・改善余地 1 項目があります。`,
-    );
-    expect(lineText(s.commentary[2])).toContain("優先改善");
-    expect(lineText(s.commentary[2])).toContain(`${s.projected} 点（${s.projectedGrade.grade}）`);
-    for (const line of s.commentary) {
-      expect(lineText(line)).not.toMatch(/危険|致命的|重大/);
-    }
-  });
-
-  it("端ケース: 全項目合格なら褒める文になり、TOP3 は空", () => {
-    const s = buildPageSummary(
-      mkPage([
-        mkCheck("title", "meta", "pass", 3),
-        mkCheck("jsonld-search-action", "structuredData", "info", 0),
-      ]),
-    );
-    expect(s.overall).toBe(100);
-    expect(s.grade.grade).toBe("A");
-    expect(s.top3).toEqual([]);
-    expect(s.projected).toBe(100);
-    expect(s.failedLabels).toEqual([]);
-    expect(s.commentary).toHaveLength(3);
-    expect(lineText(s.commentary[1])).toContain("主要項目はすべて満たしています");
-    expect(lineText(s.commentary[2])).toContain("参考項目（1 件）");
-    expect(lineNums(s.commentary[2])).toEqual(["1"]);
-  });
-
-  it("端ケース: 参考項目も無い全項目合格", () => {
-    const s = buildPageSummary(mkPage([mkCheck("title", "meta", "pass", 3)]));
-    expect(lineText(s.commentary[2])).toContain("この水準を維持し");
-  });
-
-  it("端ケース: 未対応が多くても断定語を使わず、改善後の見込みを示す", () => {
-    const s = buildPageSummary(
-      mkPage([
-        mkCheck("ai-crawlers-allowed", "crawlers", "fail", 3),
-        mkCheck("noindex", "crawlers", "fail", 2),
-        mkCheck("jsonld-exists", "structuredData", "fail", 3),
-        mkCheck("jsonld-organization", "structuredData", "fail", 2),
-        mkCheck("title", "meta", "fail", 3),
-        mkCheck("description", "meta", "fail", 3),
-        mkCheck("h1", "headings", "fail", 3),
-        mkCheck("content-length", "content", "fail", 3),
-      ]),
-    );
-    expect(s.overall).toBe(0);
-    expect(s.grade.grade).toBe("E");
-    expect(s.grade.label).toBe("要対策");
-    expect(s.top3).toHaveLength(3);
-    expect(s.projected).toBeGreaterThan(s.overall);
-    expect(s.commentary).toHaveLength(3);
-    for (const line of s.commentary) {
-      expect(lineText(line)).not.toMatch(/危険|致命的|重大|最悪/);
-    }
-  });
-
-  it("端ケース: カテゴリが空でも落ちない", () => {
-    const s = buildPageSummary({ page: SNAPSHOT, exclusion: null, overall: 0, categories: [], notes: [] });
-    expect(s.categories).toEqual([]);
-    expect(s.best.id).toBe(CATEGORY_ORDER[0]);
-    expect(s.worst.score).toBe(0);
-    expect(s.improvements).toEqual([]);
-    expect(s.commentary).toHaveLength(2);
-    expect(lineText(s.commentary[1])).toContain("診断できた項目がありません");
-  });
-
-  it("端ケース: earned が欠けた項目でも配点から見込み加点を補う", () => {
-    const broken: CheckResult = {
-      id: "h1",
-      category: "headings",
-      status: "fail",
-      label: "h1 がない",
-      weight: 3,
-      earned: Number.NaN,
-    };
-    const s = buildPageSummary(mkPage([broken, mkCheck("heading-structure", "headings", "pass", 2)]));
-    // 3 / 5 × 15 = 9 点
-    expect(s.top3[0].gain).toBeCloseTo(9, 6);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// SITE モード
-// ---------------------------------------------------------------------------
 
 describe("buildSiteSummary", () => {
   const pages = [
@@ -487,6 +225,17 @@ describe("buildSiteSummary", () => {
     expect(s.overall).toBe(70);
     expect(s.projected).toBe(92);
     expect(s.projectedGrade.grade).toBe("A");
+  });
+
+  // 見込み加点が小さすぎて四捨五入で 0 になるときは、点数の代わりに言い回しで示す
+  it("四捨五入して 0 になる見込み加点は「+1 点未満」", () => {
+    const many = Array.from({ length: 40 }, (_, i) =>
+      mkSitePage(`https://example.com/p${i}`, { meta: 100 }),
+    );
+    const s = buildSiteSummary(
+      mkSite(many, [mkSiteCheck("description", "meta", { warn: 1, pass: 39 })]),
+    );
+    expect(s.improvements.map((i) => i.gainLabel)).toEqual(["+1 点未満"]);
   });
 
   it("優先改善リストは全ページ共通とページ差を 1 本にまとめる", () => {

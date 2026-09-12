@@ -1,10 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Badge, FeatureIdChips } from "../Badge";
+import { Badge } from "../Badge";
 import { Button } from "../Button";
 import { Callout } from "../Callout";
-import { Card } from "../Card";
 import { DataTable, type Column } from "../DataTable";
 import { Field, Input } from "../Field";
 import { ProgressBar } from "../ProgressBar";
@@ -18,32 +17,18 @@ describe("Badge", () => {
     expect(html).toContain("<svg");
     expect(html).toContain("改善余地");
   });
-  it("グレード / 無料 / 機能 ID", () => {
-    expect(renderToStaticMarkup(createElement(Badge, { tone: "grade", grade: "B" }))).toContain("text-grade-b");
-    expect(renderToStaticMarkup(createElement(Badge, { tone: "free" }, "無料"))).toContain("bg-accent-soft");
-    const chips = renderToStaticMarkup(createElement(FeatureIdChips, { ids: ["D1", "D2", "D3", "D4", "D5"], max: 2 }));
-    expect(chips).toContain("D1");
-    expect(chips).toContain("+3");
-    expect(chips).toContain("font-mono");
+  it("文言は差し替えられる", () => {
+    expect(renderToStaticMarkup(createElement(Badge, { tone: "pass" }, "対応済み"))).toContain("対応済み");
   });
 });
 
-describe("Button / Card / Callout / Field / ProgressBar / Stat", () => {
+describe("Button / Callout / Field / ProgressBar / Stat", () => {
   it("Button の variant と loading", () => {
-    const html = renderToStaticMarkup(createElement(Button, { variant: "danger", loading: true }, "削除"));
-    expect(html).toContain("border-fail");
+    const html = renderToStaticMarkup(createElement(Button, { variant: "secondary", loading: true }, "中止"));
+    expect(html).toContain("border-line");
     expect(html).toContain("disabled");
     expect(html).toContain("aria-busy");
     expect(html).toContain("animate-spin");
-  });
-  it("Card は白いシート + 番号付き h2", () => {
-    const html = renderToStaticMarkup(createElement(Card, { title: "総合評価", number: 1, printCard: true }, "本文"));
-    // 画面では角丸 + ごく薄い影。印刷 / PDF では print-card 側で影と枠が外れる
-    expect(html).toContain("print-card");
-    expect(html).toContain("rounded-xl");
-    expect(html).toContain("shadow-sm");
-    expect(html).toContain("border-line");
-    expect(html).toContain("1.");
   });
   it("Callout", () => {
     expect(renderToStaticMarkup(createElement(Callout, { tone: "fail", title: "失敗" }, "詳細"))).toContain('role="alert"');
@@ -83,21 +68,22 @@ describe("DataTable", () => {
     rank: number | null;
   }
   const columns: Column<Row>[] = [
-    { key: "kw", header: "キーワード", accessor: (r) => r.kw, sortable: true },
-    { key: "rank", header: "順位", accessor: (r) => r.rank, align: "right", sortable: true },
+    { key: "kw", header: "キーワード", accessor: (r) => r.kw },
+    { key: "rank", header: "順位", accessor: (r) => r.rank, align: "right" },
   ];
   const rows: Row[] = [
     { kw: "b", rank: 3 },
     { kw: "a", rank: null },
     { kw: "c", rank: 1 },
   ];
-  it("defaultSort で並び、null は末尾", () => {
+  it("渡された順のまま出し、accessor の値をセルに書く（null は空欄）", () => {
     const html = renderToStaticMarkup(
-      createElement(DataTable<Row>, { rows, columns, rowKey: (r) => r.kw, defaultSort: { key: "rank", dir: "asc" } }),
+      createElement(DataTable<Row>, { rows, columns, rowKey: (r) => r.kw }),
     );
     const order = [...html.matchAll(/<td[^>]*>([abc])<\/td>/g)].map((m) => m[1]);
-    expect(order).toEqual(["c", "b", "a"]);
-    expect(html).toContain('aria-sort="ascending"');
+    expect(order).toEqual(["b", "a", "c"]);
+    // accessor が null を返した 1 セルだけが空になる
+    expect(html.match(/<td[^>]*><\/td>/g) ?? []).toHaveLength(1);
     expect(html).toContain("overflow-x-auto");
   });
   it("空のとき emptyText", () => {

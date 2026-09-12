@@ -1,10 +1,5 @@
 import type { ReactNode, TdHTMLAttributes } from "react";
-import { palette, scoreTone, toneColors, type ScoreTone } from "@/lib/ui/palette";
-
-/** スコア → ヒート表のセル色（hex）。SVG や inline style 用 */
-export function heatCellColors(score: number): { bg: string; fg: string } {
-  return { bg: toneColors(scoreTone(score)).bg, fg: palette.ink };
-}
+import { scoreTone, type ScoreTone } from "@/lib/ui/palette";
 
 const HEAT_CLASS: Record<ScoreTone, string> = {
   pass: "bg-pass-soft",

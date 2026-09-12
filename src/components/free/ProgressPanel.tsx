@@ -2,7 +2,7 @@
 
 /**
  * 診断中の進捗パネル（no-print）。
- * site は /api/site の NDJSON 進捗行（取得 N / 発見 M）を出し、いつでも中止できる。
+ * /api/site の NDJSON 進捗行（取得 N / 発見 M）を出し、いつでも中止できる。
  */
 import { Button, ProgressBar } from "@/components/ui";
 import type { SiteProgress } from "@/lib/analyzer/types";
@@ -14,25 +14,18 @@ const PHASE_TEXT: Record<SiteProgress["phase"], string> = {
 };
 
 export function ProgressPanel({
-  mode,
   progress,
   elapsedMs,
   onAbort,
 }: {
-  mode: "page" | "site";
   progress: SiteProgress | null;
   elapsedMs: number;
   onAbort: () => void;
 }) {
-  const isSite = mode === "site";
   const discovered = progress?.discovered ?? 0;
   const fetched = progress?.fetched ?? 0;
-  const headline = isSite
-    ? progress
-      ? PHASE_TEXT[progress.phase]
-      : "サイトの構成を調べています"
-    : "ページ・robots.txt・llms.txt を取得して解析しています";
-  const indeterminate = !isSite || !progress || progress.phase === "discover" || discovered <= 0;
+  const headline = progress ? PHASE_TEXT[progress.phase] : "サイトの構成を調べています";
+  const indeterminate = !progress || progress.phase === "discover" || discovered <= 0;
 
   return (
     <section
@@ -51,17 +44,13 @@ export function ProgressPanel({
         max={Math.max(discovered, 1)}
         indeterminate={indeterminate}
         label={
-          isSite ? (
-            <span className="text-[13px] text-ink">
-              取得 <span className="font-bold tabular-nums">{fmt(fetched)}</span> / 発見{" "}
-              <span className="font-bold tabular-nums">{fmt(discovered)}</span> ページ
-              {progress && progress.failed > 0 && (
-                <span className="ml-2 text-[12px] text-muted">失敗 {fmt(progress.failed)} 件</span>
-              )}
-            </span>
-          ) : (
-            <span className="text-[13px] text-ink">診断は 10 秒ほどで終わります</span>
-          )
+          <span className="text-[13px] text-ink">
+            取得 <span className="font-bold tabular-nums">{fmt(fetched)}</span> / 発見{" "}
+            <span className="font-bold tabular-nums">{fmt(discovered)}</span> ページ
+            {progress && progress.failed > 0 && (
+              <span className="ml-2 text-[12px] text-muted">失敗 {fmt(progress.failed)} 件</span>
+            )}
+          </span>
         }
       />
 

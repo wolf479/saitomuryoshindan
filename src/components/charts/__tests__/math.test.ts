@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  arcPath,
   circumference,
   donutDash,
   niceMax,
@@ -31,20 +30,8 @@ describe("donutDash", () => {
   });
 });
 
-describe("arcPath / ringSegmentPath", () => {
-  it("90° の弧は 1 本の A コマンド", () => {
-    const d = arcPath(70, 70, 52, 0, 90);
-    expect(d).toBe("M 70 18 A 52 52 0 0 1 122 70");
-  });
-  it("180° を超えると large-arc フラグが立つ", () => {
-    expect(arcPath(70, 70, 52, 0, 270)).toContain("0 1 1");
-  });
-  it("360° は 2 本の半円", () => {
-    const d = arcPath(70, 70, 52, 0, 360);
-    expect(d.match(/A /g)).toHaveLength(2);
-  });
+describe("ringSegmentPath", () => {
   it("0 以下の角度は空", () => {
-    expect(arcPath(0, 0, 10, 90, 90)).toBe("");
     expect(ringSegmentPath(0, 0, 10, 5, 90, 10)).toBe("");
   });
   it("環状の扇形は外周 → 内周で閉じる", () => {

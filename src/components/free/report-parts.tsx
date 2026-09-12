@@ -5,12 +5,12 @@
  * 色はトークン（Tailwind のユーティリティ）か src/lib/ui/palette.ts からだけ取る。
  */
 import { Fragment, type ReactNode } from "react";
-import type { CheckStatus, SiteDiscovery } from "@/lib/analyzer/types";
+import type { SiteDiscovery } from "@/lib/analyzer/types";
 import type { CommentaryLine } from "@/lib/report";
 import { GRADE_BANDS } from "@/lib/ui/grade";
 
 /** 「A 90〜」「B 80〜」… の各区分 */
-export const GRADE_SCALE_PARTS = GRADE_BANDS.map((band, i) =>
+const GRADE_SCALE_PARTS = GRADE_BANDS.map((band, i) =>
   i === GRADE_BANDS.length - 1
     ? `${band.grade} 〜${GRADE_BANDS[i - 1].min - 1}`
     : `${band.grade} ${band.min}〜`,
@@ -44,14 +44,6 @@ export const DISCOVERY_LABEL: Record<SiteDiscovery, string> = {
   "sitemap+links": "sitemap.xml と内部リンクから収集",
   "entry-only": "入力 URL のみ",
 };
-
-/** 詳細一覧の並び順: 未対応 → 改善余地 → 参考 → 合格 */
-export const STATUS_ORDER: readonly CheckStatus[] = ["fail", "warn", "info", "pass"];
-
-export function statusRank(status: CheckStatus): number {
-  const i = STATUS_ORDER.indexOf(status);
-  return i === -1 ? STATUS_ORDER.length : i;
-}
 
 /** 数値は必ず tabular-nums の span に入れる（和文の中でも桁が揃う） */
 export function Num({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -111,11 +103,6 @@ export function Advice({ children, className = "" }: { children: ReactNode; clas
       {children}
     </p>
   );
-}
-
-/** 判定根拠（12px muted） */
-export function Evidence({ children }: { children: ReactNode }) {
-  return <p className="mt-0.5 text-[12px] leading-relaxed break-words text-muted">{children}</p>;
 }
 
 /** 講評 3 行。{ num } の部分だけ tabular-nums で強調する */

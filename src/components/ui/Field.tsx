@@ -6,22 +6,16 @@ export interface FieldProps {
   htmlFor?: string;
   hint?: ReactNode;
   error?: ReactNode;
-  required?: boolean;
   className?: string;
   children: ReactNode;
 }
 
 /** ラベル 13px / 700 + 入力 + 補足 / エラー */
-export function Field({ label, htmlFor, hint, error, required, className = "", children }: FieldProps) {
+export function Field({ label, htmlFor, hint, error, className = "", children }: FieldProps) {
   return (
     <div className={className}>
       <label htmlFor={htmlFor} className="mb-1 block text-[13px] font-bold text-ink">
         {label}
-        {required && (
-          <span className="ml-1 text-[11px] font-normal text-fail" aria-hidden>
-            必須
-          </span>
-        )}
       </label>
       {children}
       {error ? (

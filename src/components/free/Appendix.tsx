@@ -5,7 +5,6 @@
  */
 import { DataTable, type Column } from "@/components/ui";
 import type {
-  AnalysisResult,
   SiteAnalysisResult,
   SiteCrawlStats,
   SiteExcludedPage,
@@ -13,43 +12,6 @@ import type {
 } from "@/lib/analyzer/types";
 import { fmt, formatDuration, pathOf, type SiteReportSummary } from "@/lib/report";
 import { DISCOVERY_LABEL, EmptyLine, KeyValue, Num, ReportSection, SubHeading } from "./report-parts";
-
-export function PageAppendix({ result, number }: { result: AnalysisResult; number: string }) {
-  const page = result.page;
-  return (
-    <ReportSection number={number} title="診断対象ページの情報">
-      <dl className="grid gap-x-8 @md:grid-cols-2">
-        <KeyValue term="診断した URL（最終）">
-          <span className="break-all">{page.finalUrl}</span>
-        </KeyValue>
-        <KeyValue term="HTTP ステータス">
-          <span className="tabular-nums">{page.status}</span>
-        </KeyValue>
-        <KeyValue term="title">{page.title ?? "（設定されていません）"}</KeyValue>
-        <KeyValue term="meta description">{page.description ?? "（設定されていません）"}</KeyValue>
-        <KeyValue term="html の lang 属性">{page.lang ?? "（設定されていません）"}</KeyValue>
-        <KeyValue term="本文の文字数">
-          <Num>約 {fmt(page.mainTextLength)}</Num> 文字（ページ全体 <Num>{fmt(page.rawTextLength)}</Num> 文字）
-        </KeyValue>
-        <KeyValue term="JSON-LD の @type">
-          {page.jsonLdTypes.length > 0 ? page.jsonLdTypes.join(" / ") : "（検出されませんでした）"}
-        </KeyValue>
-        <KeyValue term="h1 の数">
-          <Num>{fmt(page.h1Count)}</Num> 個
-        </KeyValue>
-      </dl>
-      {result.notes.length > 0 && (
-        <ul className="mt-3 space-y-1">
-          {result.notes.map((note) => (
-            <li key={note} className="text-[12px] leading-relaxed text-muted">
-              ※ {note}
-            </li>
-          ))}
-        </ul>
-      )}
-    </ReportSection>
-  );
-}
 
 const FAILURE_COLUMNS: Column<SitePageFailure>[] = [
   {

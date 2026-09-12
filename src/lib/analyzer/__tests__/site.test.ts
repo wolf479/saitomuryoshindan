@@ -2,8 +2,22 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { SiteProgress } from "../types";
-import { analyze } from "../index";
+import { fetchText, normalizeUrl } from "../fetch";
+import { analyzeFetched, assertHtmlPage } from "../index";
+import { fetchSiteFiles } from "../robots";
 import { analyzeSite } from "../site";
+
+/**
+ * 1 ページだけを取得して診断する（サイト診断がページごとにしていることと同じ）。
+ * 画面はサイト全体しか診断しないので、1 ページ分の入口はこのテストにだけ置く。
+ */
+async function analyze(input: string) {
+  const url = normalizeUrl(input);
+  const page = await fetchText(url.toString());
+  assertHtmlPage(page);
+  const siteFiles = await fetchSiteFiles(new URL(page.finalUrl).origin);
+  return analyzeFetched(page, siteFiles, { requestedUrl: url.toString() });
+}
 
 /**
  * ローカルに立てたダミーサイトに対して、実際に fetch させて診断する。
@@ -220,7 +234,7 @@ describe("ページ単位の診断", () => {
     expect(total(company)).toBe(total(top));
   });
 
-  // page モードは 1 ページだけなので平均は無い。点数は出すが、参考値だと注記する
+  // 1 ページだけを見るときは平均が無い。点数は出すが、参考値だと注記する
   it("検索対象外のページは単体診断でも注記を出す", async () => {
     const search = await analyze(`${origin}/search`);
     expect(search.exclusion?.kind).toContain("サイト内検索");

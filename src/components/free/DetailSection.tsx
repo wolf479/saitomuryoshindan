@@ -4,60 +4,12 @@
  * - site: 「全ページ共通の問題」と「ページによって差がある項目」の 2 群（§3.3-5）
  */
 import { Badge } from "@/components/ui";
-import type { AnalysisResult } from "@/lib/analyzer/types";
 import { fmt, pathOf, type PriorityItem, type SiteReportSummary } from "@/lib/report";
 import { TONE_LABELS } from "@/lib/ui/palette";
-import { Advice, EmptyLine, Evidence, Num, ReportSection, statusRank, SubHeading } from "./report-parts";
+import { Advice, EmptyLine, Num, ReportSection, SubHeading } from "./report-parts";
 
 /** 該当ページの列挙はこの件数まで（PDF の 1 要素が長くなりすぎないように） */
 const MAX_AFFECTED = 8;
-
-export function PageDetailSection({
-  result,
-  number,
-}: {
-  result: AnalysisResult;
-  number: number;
-}) {
-  return (
-    <ReportSection
-      number={number}
-      title="改善提案（詳細）"
-      lead="診断したすべての項目です。未対応・改善余地のある項目には、判定の根拠と対応方法を添えています。"
-    >
-      {result.categories.map((category) => {
-        const checks = [...category.checks].sort(
-          (a, b) => statusRank(a.status) - statusRank(b.status) || a.id.localeCompare(b.id),
-        );
-        return (
-          <div key={category.id}>
-            <SubHeading note={`${category.checks.length} 項目`}>
-              {category.label} — <span className="tabular-nums">{category.score}</span> 点
-            </SubHeading>
-            <ul>
-              {checks.map((check) => (
-                <li key={check.id} className="grid grid-cols-[5.5rem_1fr] gap-3 border-b border-line py-3">
-                  <div>
-                    <Badge tone={check.status}>{TONE_LABELS[check.status]}</Badge>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[14px] leading-snug text-ink">{check.label}</p>
-                    {check.status !== "pass" && (
-                      <>
-                        {check.evidence && <Evidence>{check.evidence}</Evidence>}
-                        {check.advice && <Advice>{check.advice}</Advice>}
-                      </>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
-    </ReportSection>
-  );
-}
 
 export function SiteDetailSection({
   summary,

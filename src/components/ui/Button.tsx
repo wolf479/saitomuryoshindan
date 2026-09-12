@@ -1,14 +1,12 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary:
     "bg-accent text-on-brand border border-accent hover:bg-accent-strong hover:border-accent-strong focus-visible:ring-accent/40",
   secondary: "bg-panel text-ink border border-line hover:bg-surface focus-visible:ring-accent/40",
-  ghost: "bg-transparent text-accent border border-transparent hover:bg-accent-soft focus-visible:ring-accent/40",
-  danger: "bg-panel text-fail border border-fail hover:bg-fail-soft focus-visible:ring-fail/40",
 };
 
 const SIZE: Record<ButtonSize, string> = {

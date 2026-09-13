@@ -29,9 +29,8 @@ export function DiagnosisForm({
     <section className="no-print mb-8">
       <div className="pt-8 pb-6 text-center sm:pt-12">
         <h1 className="text-[28px] leading-tight font-bold tracking-tight text-ink sm:text-[34px]">
-          サイトの健康状態を、
-          <wbr />
-          <span className="whitespace-nowrap text-accent">1 分で</span>
+          URL を入れるだけ。
+          <span className="block text-accent">サイト全体を無料診断</span>
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-muted">
           {BRAND.description}

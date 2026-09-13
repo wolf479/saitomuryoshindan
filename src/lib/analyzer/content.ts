@@ -2,6 +2,14 @@ import * as cheerio from "cheerio";
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { check } from "./check";
+import {
+  hasFact,
+  LANG_LABEL,
+  readLangContext,
+  splitSentences,
+  type LangContext,
+  type TextLang,
+} from "./sentences";
 import type { CheckResult, CheckStatus } from "./types";
 
 export interface ContentInfo {
@@ -18,6 +26,12 @@ export interface ContentInfo {
   concreteSentences: number;
   /** 本文の文の総数 */
   totalSentences: number;
+  /** 文を割るのに使った言語（ブロックごとに決めたものの多数派） */
+  contentLang: TextLang;
+  /** `<html lang>` の値。宣言が無ければ null */
+  langTag: string | null;
+  /** 具体情報を含むと判定した文の実例（先頭 3 件・各 60 字まで） */
+  concreteExamples: string[];
   /** 本文領域の h2 / h3 の数 */
   mainHeadings: number;
   /** そのうち、直後に本文が続かないもの（見出しだけで中身が無い）の数 */
@@ -69,42 +83,50 @@ export function countChars(text: string): number {
    数値・日付・組織名・連絡先を含む文を数える。短くても具体的なページ
    （例: 電話番号と受付時間が書かれた問い合わせページ）は通り、長くても
    抽象的なだけのページは通らない。
+
+   文の割り方と事実の拾い方そのものは sentences.ts にある（日本語以外の
+   ページでも同じ基準で測れるよう、言語ごとに規則を変えている）。
    ───────────────────────────────────────────────────────────── */
 
-/** 数量（単位・助数詞つきの数字） */
-const RE_QUANTITY =
-  /\d+(?:[.,]\d+)?\s*(?:円|万円|億円|%|％|人|名|社|件|個|台|回|点|種|品|室|席|階|坪|畳|㎡|平方メートル|km|m|cm|mm|kg|g|t|L|ml|年|ヶ月|か月|カ月|箇月|月|日|週|時間|分|秒|歳|才|位|倍|割|周年|以上|以下|未満)/;
-/** 日付・年月 */
-const RE_DATE = /\d{4}\s*年|\d{1,2}\s*月\s*\d{1,2}\s*日|令和\s*\d+|平成\s*\d+|\d{4}[-/]\d{1,2}[-/]\d{1,2}/;
-/** 組織・法人格 */
-const RE_ORG =
-  /株式会社|有限会社|合同会社|合資会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|特定非営利活動法人|NPO法人|独立行政法人|学校法人|医療法人|社会福祉法人/;
-/** 連絡先・所在地 */
-const RE_CONTACT = /〒\s*\d{3}|\d{2,4}-\d{2,4}-\d{4}|\d{1,2}:\d{2}|TEL|Tel|電話番号/;
-
-const CONCRETE_PATTERNS = [RE_QUANTITY, RE_DATE, RE_ORG, RE_CONTACT];
-
-/** 句点で文に割る。空白しか無い断片は落とす */
-export function splitSentences(text: string): string[] {
+/**
+ * 本文テキストをブロック（段落・li・表のセル・見出し）の並びにする。
+ * `separateBlocks` がブロックの閉じタグ前に入れた改行が区切りになる。
+ */
+export function toBlocks(text: string): string[] {
   return text
-    .split(/[。！？!?]+/)
-    .map((t) => t.trim())
+    .split(/\n+/)
+    .map((t) => t.replace(/\s+/g, " ").trim())
     .filter((t) => t.length > 0);
 }
 
 export interface Specificity {
   concrete: number;
   total: number;
+  /** 文を割るのに使った言語（多数派） */
+  lang: TextLang;
+  /** 具体情報を含むと判定した文の実例（先頭 3 件） */
+  examples: string[];
+}
+
+/** 実例は 1 件 60 字まで。長い文は中略する */
+function shorten(text: string, max = 60): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
 /** 具体情報を含む文の数と、文の総数を返す */
-export function measureSpecificity(mainText: string): Specificity {
-  const sentences = splitSentences(mainText);
+export function measureSpecificity(blocks: readonly string[], ctx: LangContext): Specificity {
+  const sentences = splitSentences(blocks, ctx);
+  const byLang: Record<TextLang, number> = { ja: 0, latin: 0 };
+  const examples: string[] = [];
   let concrete = 0;
   for (const sentence of sentences) {
-    if (CONCRETE_PATTERNS.some((re) => re.test(sentence))) concrete += 1;
+    byLang[sentence.lang] += 1;
+    if (!hasFact(sentence.text)) continue;
+    concrete += 1;
+    if (examples.length < 3) examples.push(shorten(sentence.text));
   }
-  return { concrete, total: sentences.length };
+  const lang = byLang.ja === byLang.latin ? ctx.page : byLang.ja > byLang.latin ? "ja" : "latin";
+  return { concrete, total: sentences.length, lang, examples };
 }
 
 /**
@@ -153,6 +175,9 @@ export function separateBlocks(html: string): string {
 
 export function extractContent(html: string, url: string, $: cheerio.CheerioAPI): ContentInfo {
   // --- 本文抽出 -------------------------------------------------------------
+  // ブロック（段落・li・表のセル・見出し）の区切りは文を数えるのに要るので、
+  // 空白に潰す前に blocks として取っておく。mainText はそれを空白でつないだもの。
+  let blocks: string[] = [];
   let mainText = "";
   let readable = false;
   const spaced = separateBlocks(html);
@@ -166,7 +191,8 @@ export function extractContent(html: string, url: string, $: cheerio.CheerioAPI)
     }
     const article = new Readability(document, { charThreshold: 200 }).parse();
     if (article?.textContent) {
-      mainText = normalizeText(article.textContent);
+      blocks = toBlocks(article.textContent);
+      mainText = blocks.join(" ");
       readable = true;
     }
   } catch {
@@ -175,10 +201,11 @@ export function extractContent(html: string, url: string, $: cheerio.CheerioAPI)
 
   const $clone = cheerio.load(spaced);
   $clone("script, style, noscript, template, svg, nav, header, footer, aside, form").remove();
-  const fallback = normalizeText($clone("body").text());
+  const fallbackBlocks = toBlocks($clone("body").text());
 
   if (!readable || shouldUseFallback(mainText.length)) {
-    mainText = fallback;
+    blocks = fallbackBlocks;
+    mainText = blocks.join(" ");
     readable = false;
   }
 
@@ -192,7 +219,8 @@ export function extractContent(html: string, url: string, $: cheerio.CheerioAPI)
     return alt === undefined || alt.trim() === "";
   }).length;
 
-  const specificity = measureSpecificity(mainText);
+  const langContext = readLangContext($, mainText);
+  const specificity = measureSpecificity(blocks, langContext);
   const headingBodies = measureHeadingBodies($);
 
   return {
@@ -205,10 +233,27 @@ export function extractContent(html: string, url: string, $: cheerio.CheerioAPI)
     scripts: $("script[src]").length,
     concreteSentences: specificity.concrete,
     totalSentences: specificity.total,
+    contentLang: specificity.lang,
+    langTag: langContext.tag,
+    concreteExamples: specificity.examples,
     mainHeadings: headingBodies.headings,
     headingsWithoutBody: headingBodies.withoutBody,
   };
 }
+
+/**
+ * 具体性の判定に使うしきい値。
+ *
+ * 総文数がこれ未満のときは比率で判定しない。分母が小さいと 1 文の有無で
+ * 比率が 0% と 100% の間を飛ぶため、比率での減点が意味を持たない。
+ */
+const MIN_RATIO_SENTENCES = 5;
+/** 比率で判定するときの下限 */
+const MIN_CONCRETE_RATIO = 0.1;
+/** 比率で判定するときに併せて求める絶対数 */
+const MIN_CONCRETE_FOR_RATIO = 2;
+/** 比率を使わないとき「十分」と言える絶対数 */
+const MIN_CONCRETE_COUNT = 3;
 
 export function checkContent(info: ContentInfo): CheckResult[] {
   const results: CheckResult[] = [];
@@ -242,16 +287,37 @@ export function checkContent(info: ContentInfo): CheckResult[] {
   const concrete = info.concreteSentences;
   const sentences = info.totalSentences;
   const concreteRatio = sentences > 0 ? concrete / sentences : 0;
-  // 文がほとんど無いページ（一覧・受付など）は fail にしない。
-  // 文章はあるのに具体的な事実が 1 つも無いページだけを fail とする。
+  //
+  // 判定の分かれ方:
+  //   総文数 5 文以上 → 比率で見る（10% 以上かつ 2 文以上で pass）
+  //   総文数 5 文未満 → 比率は当てにならないので使わない。事実が 1 つでもあれば
+  //                     減点しない（3 文以上あれば「十分」、1〜2 文は「測定不能」）
+  // 分母が小さいページを比率で減点しないのは、1 文しか無いページの「1 / 1 文 = 100%」を
+  // 「少なめ」と報告してしまう矛盾を避けるため。
+  const byRatio = sentences >= MIN_RATIO_SENTENCES;
   const specificityStatus: CheckStatus =
     concrete === 0
       ? sentences >= 3
         ? "fail"
         : "warn"
-      : concrete >= 2 && concreteRatio >= 0.1
-        ? "pass"
-        : "warn";
+      : byRatio
+        ? concrete >= MIN_CONCRETE_FOR_RATIO && concreteRatio >= MIN_CONCRETE_RATIO
+          ? "pass"
+          : "warn"
+        : "pass";
+  const measurable = byRatio || concrete >= MIN_CONCRETE_COUNT;
+  const basis = byRatio
+    ? `比率（全 ${sentences} 文 = ${MIN_RATIO_SENTENCES} 文以上のため）・基準 ${Math.round(MIN_CONCRETE_RATIO * 100)}% 以上かつ ${MIN_CONCRETE_FOR_RATIO} 文以上`
+    : concrete === 0
+      ? `絶対数（全 ${sentences} 文と少ないため比率は使わない）・具体情報 0 文`
+      : concrete >= MIN_CONCRETE_COUNT
+        ? `絶対数（全 ${sentences} 文と少ないため比率は使わない）・基準 ${MIN_CONCRETE_COUNT} 文以上`
+        : `測定不能（全 ${sentences} 文と少ないため比率は使わない。具体情報 ${concrete} 文では絶対数でも判定できないので減点しない）`;
+  const langNote = `${LANG_LABEL[info.contentLang]}${info.langTag ? `・html lang="${info.langTag}"` : "・lang 属性なし（文字種から推定）"}`;
+  const examples =
+    info.concreteExamples.length > 0
+      ? ` / 具体情報と判定した文の例: ${info.concreteExamples.map((e) => `「${e}」`).join("")}`
+      : "";
   results.push(
     check({
       id: "content-specificity",
@@ -260,17 +326,21 @@ export function checkContent(info: ContentInfo): CheckResult[] {
       weight: 3,
       label:
         specificityStatus === "pass"
-          ? "AI が引用できる具体的な情報がある"
+          ? measurable
+            ? "AI が引用できる具体的な情報がある"
+            : "本文が短く、具体性は判定できない（減点なし）"
           : specificityStatus === "warn"
             ? "具体的な情報がやや少ない"
             : "具体的な情報が見当たらない",
-      evidence: `数値・日付・組織名・連絡先を含む文 ${concrete} / 全 ${sentences} 文`,
+      evidence: `数値・日付・組織名・連絡先を含む文 ${concrete} / 全 ${sentences} 文${
+        byRatio ? `（${Math.round(concreteRatio * 100)}%）` : ""
+      } / 判定: ${basis} / 言語: ${langNote}${examples}`,
       advice:
         concrete === 0 && sentences < 3
           ? "このページには文章がほとんどありません。一覧や受付などの案内ページであればそのままで問題ありません。AI に引用させたい内容があるページなら、具体的な記述を加えてください。"
           : specificityStatus === "fail"
             ? "文章はありますが、数値・日付・料金・実績といった具体的な事実がほとんど含まれていません。AI 検索は「誰が・何を・いつ・どこで・いくらで」が書かれたページを引用します。文字数を増やすのではなく、いま書かれている説明に具体的な数字と固有名詞を加えてください。"
-            : "具体的な事実を含む文が全体に対して少なめです。抽象的な説明を増やすのではなく、実績の件数・対応エリア・料金・所要期間など、確認できる事実を本文に足してください。",
+            : `具体的な事実を含む文が全体に対して少なめです（${concrete} / 全 ${sentences} 文）。抽象的な説明を増やすのではなく、実績の件数・対応エリア・料金・所要期間など、確認できる事実を本文に足してください。あと ${Math.max(MIN_CONCRETE_FOR_RATIO - concrete, Math.ceil(sentences * MIN_CONCRETE_RATIO) - concrete, 1)} 文で基準（${Math.round(MIN_CONCRETE_RATIO * 100)}% 以上かつ ${MIN_CONCRETE_FOR_RATIO} 文以上）に届きます。`,
     }),
   );
 

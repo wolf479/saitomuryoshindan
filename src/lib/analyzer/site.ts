@@ -60,7 +60,7 @@ export function pickPages(entryUrl: string, candidates: string[], limit: number)
 }
 
 export interface AnalyzeSiteOptions {
-  /** ページ数の上限。省略時は SITE_MAX_PAGES（既定 300、最大 1000） */
+  /** ページ数の上限。省略時は SITE_MAX_PAGES（既定・最大とも 100） */
   maxPages?: number;
   /** クロール全体の時間予算（ミリ秒）。既定 240 秒 */
   timeBudgetMs?: number;

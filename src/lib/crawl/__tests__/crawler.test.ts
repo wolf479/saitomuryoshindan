@@ -165,17 +165,17 @@ describe("resolveMaxPages", () => {
   it("SITE_MAX_PAGES が上限と既定を決め、リクエストはそれ以下に丸める", () => {
     const before = process.env.SITE_MAX_PAGES;
     delete process.env.SITE_MAX_PAGES;
-    expect(resolveMaxPages()).toBe(300);
-    expect(resolveMaxPages(5000)).toBe(300);
+    expect(resolveMaxPages()).toBe(100);
+    expect(resolveMaxPages(5000)).toBe(100);
     expect(resolveMaxPages(0)).toBe(1);
     expect(resolveMaxPages(2.7)).toBe(2);
     process.env.SITE_MAX_PAGES = "50";
     expect(resolveMaxPages()).toBe(50);
     expect(resolveMaxPages(80)).toBe(50);
     process.env.SITE_MAX_PAGES = "99999";
-    expect(resolveMaxPages()).toBe(1000);
+    expect(resolveMaxPages()).toBe(100);
     process.env.SITE_MAX_PAGES = "abc";
-    expect(resolveMaxPages()).toBe(300);
+    expect(resolveMaxPages()).toBe(100);
     if (before === undefined) delete process.env.SITE_MAX_PAGES;
     else process.env.SITE_MAX_PAGES = before;
   });

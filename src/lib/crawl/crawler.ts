@@ -12,9 +12,9 @@ import {
 } from "./url";
 
 /** 既定のページ数上限。SITE_MAX_PAGES で変更できる */
-export const DEFAULT_MAX_PAGES = 300;
+export const DEFAULT_MAX_PAGES = 100;
 /** 環境変数でも超えられない上限 */
-export const HARD_MAX_PAGES = 1000;
+export const HARD_MAX_PAGES = 100;
 /** 既定の時間予算。Route Handler の maxDuration（300 秒）に取得 1 回分の余裕を残す */
 export const DEFAULT_TIME_BUDGET_MS = 240_000;
 /** 同時取得数。相手サーバーへの負荷と所要時間の折り合い */
@@ -26,7 +26,7 @@ const DISCOVER_TIME_BUDGET_MS = 60_000;
 
 /**
  * ページ数の上限を決める。
- * SITE_MAX_PAGES（既定 300、最大 1000）が運用側の上限で、リクエストはそれ以下に丸める。
+ * SITE_MAX_PAGES（既定・最大とも 100）が運用側の上限で、リクエストはそれ以下に丸める。
  */
 export function resolveMaxPages(requested?: number | null): number {
   const env = Number.parseInt(process.env.SITE_MAX_PAGES ?? "", 10);

@@ -10,6 +10,15 @@ export const USER_AGENT = "Mozilla/5.0 (compatible; SiteKenshin/0.1)";
 const DEFAULT_TIMEOUT_MS = 12_000;
 const MAX_BYTES = 3 * 1024 * 1024; // 3MB
 
+/**
+ * 診断するページ（HTML）の受信上限。超えた分は読まずに先頭だけで採点する。
+ *
+ * Vercel の無料枠（Hobby）の関数メモリは 2GB。HTML はデコード後の文字列と
+ * cheerio の DOM で元の十数倍に膨らむため、同時取得 4 本 × 10MB でも 1GB 未満に収まる。
+ * 受信した本文は採点後に捨てるので、ページ数が増えてもメモリは積み上がらない。
+ */
+export const PAGE_MAX_BYTES = 10 * 1024 * 1024; // 10MB
+
 export class FetchError extends Error {
   constructor(
     message: string,
@@ -191,6 +200,7 @@ async function fetchFollowingRedirects(
  * サイズ上限を超えたときは既定で `too_large` の FetchError を投げる。
  * `truncate: true` なら上限までで受信を打ち切り、`timing.truncated` を立てて返す
  * （重いページでも、HTML の先頭にある title・meta・見出しなどは採点できるため）。
+ * 本文の受信中に時間切れになったときも、`truncate: true` なら受信できた分を返す。
  */
 export async function fetchText(
   url: string,
@@ -218,7 +228,18 @@ export async function fetchText(
     let truncated = false;
     if (reader) {
       for (;;) {
-        const { done, value } = await reader.read();
+        let chunk: ReadableStreamReadResult<Uint8Array>;
+        try {
+          chunk = await reader.read();
+        } catch (err) {
+          // 重いページの受信途中で時間切れ: 受信できた分で採点する
+          if (options.truncate && received > 0 && (err as Error).name === "AbortError") {
+            truncated = true;
+            break;
+          }
+          throw err;
+        }
+        const { done, value } = chunk;
         if (done) break;
         if (received + value.byteLength > maxBytes) {
           reader.cancel().catch(() => {});

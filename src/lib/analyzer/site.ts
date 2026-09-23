@@ -96,7 +96,7 @@ export async function analyzeSite(
 
   // 入力ページを先に取得する。サイトに到達できるかを早く判定し、
   // www 有無や http→https のリダイレクトを踏まえた「本当のオリジン」をここで確定する
-  const entryPage = await fetchText(entry.toString(), { timeoutMs: PAGE_TIMEOUT_MS });
+  const entryPage = await fetchText(entry.toString(), { timeoutMs: PAGE_TIMEOUT_MS, truncate: true });
   assertHtmlPage(entryPage);
   const finalEntry = new URL(entryPage.finalUrl);
   const notes: string[] = [];

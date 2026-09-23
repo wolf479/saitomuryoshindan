@@ -159,7 +159,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       page =
         options.entryPage && url === entryUrl
           ? options.entryPage
-          : await fetchText(url, { timeoutMs: PAGE_TIMEOUT_MS });
+          : await fetchText(url, { timeoutMs: PAGE_TIMEOUT_MS, truncate: true });
     } catch (err) {
       fetched += 1;
       // 診断できないホスト（内部アドレスへの転送など）は失敗一覧に出さずに読み飛ばす。

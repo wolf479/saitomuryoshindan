@@ -119,8 +119,10 @@ export interface FetchTiming {
   ttfbMs: number;
   /** HTML の受信が終わるまで */
   totalMs: number;
-  /** 受信したバイト数（デコード前） */
+  /** 受信したバイト数（デコード前）。`truncated` のときは上限までの数で、実際はこれより大きい */
   bytes: number;
+  /** サイズ上限に達したため途中で受信を打ち切った */
+  truncated?: boolean;
 }
 
 /** 追跡してよいリダイレクトの回数 */
@@ -185,10 +187,14 @@ async function fetchFollowingRedirects(
  * ネットワーク例外は投げず `ok: false, status: 0` として返す（robots.txt 等の任意ファイル向け）。
  * リダイレクトは自分で追い、最初のホップを含めて毎回 `assertPublicHost` を通す
  * （内部アドレスは接続前に `blocked_host` の FetchError になる）。
+ *
+ * サイズ上限を超えたときは既定で `too_large` の FetchError を投げる。
+ * `truncate: true` なら上限までで受信を打ち切り、`timing.truncated` を立てて返す
+ * （重いページでも、HTML の先頭にある title・meta・見出しなどは採点できるため）。
  */
 export async function fetchText(
   url: string,
-  options: { timeoutMs?: number; maxBytes?: number } = {},
+  options: { timeoutMs?: number; maxBytes?: number; truncate?: boolean } = {},
 ): Promise<FetchedText> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
@@ -209,15 +215,23 @@ export async function fetchText(
     const reader = res.body?.getReader();
     const chunks: Uint8Array[] = [];
     let received = 0;
+    let truncated = false;
     if (reader) {
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        received += value.byteLength;
-        if (received > maxBytes) {
+        if (received + value.byteLength > maxBytes) {
           reader.cancel().catch(() => {});
-          throw new FetchError("ページサイズが大きすぎます", "too_large");
+          if (!options.truncate) {
+            throw new FetchError("ページサイズが大きすぎます", "too_large");
+          }
+          const rest = maxBytes - received;
+          if (rest > 0) chunks.push(value.subarray(0, rest));
+          received = maxBytes;
+          truncated = true;
+          break;
         }
+        received += value.byteLength;
         chunks.push(value);
       }
     }
@@ -241,6 +255,7 @@ export async function fetchText(
         ttfbMs: Math.round(ttfbMs),
         totalMs: Math.round(performance.now() - started),
         bytes: received,
+        ...(truncated ? { truncated } : {}),
       },
     };
   } catch (err) {

@@ -33,13 +33,17 @@ const SNAPSHOT: PageSnapshot = {
   fetchedAt: "2026-09-06T05:00:00.000Z",
 };
 
+const EXTRA_CATEGORIES: CategoryId[] = ["trust", "contact", "performance", "security", "mobile"];
+
 function mkSitePage(
   url: string,
   scores: Partial<Record<CategoryId, number>>,
   overall?: number,
 ): SitePageResult {
+  // 指定の無いカテゴリは 0 点。ただし追加の 5 カテゴリ（信頼性〜モバイル対応）は、
+  // 既存カテゴリだけで組んだフィクスチャの結果を変えないよう 100 点とみなす
   const full = Object.fromEntries(
-    CATEGORY_ORDER.map((id) => [id, scores[id] ?? 0]),
+    CATEGORY_ORDER.map((id) => [id, scores[id] ?? (EXTRA_CATEGORIES.includes(id) ? 100 : 0)]),
   ) as Record<CategoryId, number>;
   const weighted =
     CATEGORY_ORDER.reduce((s, id) => s + full[id] * CATEGORY_WEIGHTS[id], 0) / 100;
@@ -181,7 +185,7 @@ describe("buildSiteSummary", () => {
 
   it("集計が欠けていてもページから作り直す", () => {
     const s = buildSiteSummary(mkSite(pages, checks, { categories: [] }));
-    expect(s.categories).toHaveLength(5);
+    expect(s.categories).toHaveLength(CATEGORY_ORDER.length);
     expect(s.categories.find((c) => c.id === "headings")?.min).toBe(50);
     expect(s.categories.find((c) => c.id === "headings")?.worstUrl).toBe("https://example.com/c");
   });
@@ -189,24 +193,24 @@ describe("buildSiteSummary", () => {
   it("見込み加点は (配点 × 未対応 + 0.5 × 配点 × 改善余地) / N / Σ配点 × カテゴリ配点", () => {
     const s = buildSiteSummary(site);
     // structuredData の Σ配点 = 2(jsonld-parse-error) + 1(jsonld-website) + 0(jsonld-search-action) = 3
-    //   jsonld-parse-error: 2 × 2 / 4 / 3 × 25 = 8.333…
-    //   jsonld-website:     0.5 × 1 × 1 / 4 / 3 × 25 = 1.041…
+    //   jsonld-parse-error: 2 × 2 / 4 / 3 × 15 = 5
+    //   jsonld-website:     0.5 × 1 × 1 / 4 / 3 × 15 = 0.625
     // crawlers の Σ配点 = 3(ai-crawlers-allowed) + 2(noindex) + 0(llms-txt) = 5
-    //   noindex:             2 × 4 / 4 / 5 × 20 = 8
-    //   ai-crawlers-allowed: 3 × 2 / 4 / 5 × 20 = 6（配点は大きいが該当が 2 ページなので下）
+    //   noindex:             2 × 4 / 4 / 5 × 15 = 6
+    //   ai-crawlers-allowed: 3 × 2 / 4 / 5 × 15 = 4.5（配点は大きいが該当が 2 ページなので下）
     expect(s.improvements.map((i) => i.id)).toEqual([
-      "jsonld-parse-error",
       "noindex",
+      "jsonld-parse-error",
       "ai-crawlers-allowed",
       "jsonld-website",
     ]);
-    expect(s.improvements.map((i) => i.gainLabel)).toEqual(["+8 点", "+8 点", "+6 点", "+1 点"]);
-    expect(s.improvements[0].gain).toBeCloseTo(8.333, 3);
-    expect(s.improvements[1].gain).toBeCloseTo(8, 3);
-    expect(s.improvements[3].gain).toBeCloseTo(1.042, 3);
+    expect(s.improvements.map((i) => i.gainLabel)).toEqual(["+6 点", "+5 点", "+5 点", "+1 点"]);
+    expect(s.improvements[0].gain).toBeCloseTo(6, 3);
+    expect(s.improvements[1].gain).toBeCloseTo(5, 3);
+    expect(s.improvements[3].gain).toBeCloseTo(0.625, 3);
     // 配点 0 の項目（llms-txt など参考表示）は改善提案に出さない
     expect(s.improvements.map((i) => i.id)).not.toContain("llms-txt");
-    const uniformItem = s.improvements[1];
+    const uniformItem = s.improvements[0];
     expect(uniformItem.spread).toBe("uniform");
     expect(uniformItem.status).toBe("fail");
     expect(uniformItem.affectedPages).toBe(4);
@@ -221,9 +225,9 @@ describe("buildSiteSummary", () => {
     // 全ページ合格の項目は優先改善に出さない
     expect(s.improvements.some((i) => i.id === "llms-txt")).toBe(false);
     expect(s.top3).toHaveLength(3);
-    // 総合 70 点 + TOP3 の 8.33 + 8 + 6 = 92 点
-    expect(s.overall).toBe(70);
-    expect(s.projected).toBe(92);
+    // 総合 81 点 + TOP3 の 6 + 5 + 4.5 = 96.5 → 97 点
+    expect(s.overall).toBe(81);
+    expect(s.projected).toBe(97);
     expect(s.projectedGrade.grade).toBe("A");
   });
 
@@ -270,14 +274,15 @@ describe("buildSiteSummary", () => {
 
   it("ページ一覧は入力 URL を先頭に固定し、残りは総合の低い順", () => {
     const s = buildSiteSummary(site);
-    expect(s.rankedPages.map((p) => p.path)).toEqual(["/（トップ）", "/a", "/c", "/b"]);
+    // 総合: /（トップ） 93 / a 74 / b 82 / c 73
+    expect(s.rankedPages.map((p) => p.path)).toEqual(["/（トップ）", "/c", "/a", "/b"]);
     expect(s.rankedPages.map((p) => p.rank)).toEqual([1, 2, 3, 4]);
     expect(s.rankedPages[0].isEntry).toBe(true);
     expect(s.rankedPages.slice(1).every((p) => !p.isEntry)).toBe(true);
-    expect(s.rankedPages[1].scores.structuredData).toBe(40);
-    expect(s.worstPage.path).toBe("/a");
+    expect(s.rankedPages[2].scores.structuredData).toBe(40);
+    expect(s.worstPage.path).toBe("/c");
     expect(s.bestPage.path).toBe("/（トップ）");
-    expect(s.bestPage.grade.grade).toBe("B");
+    expect(s.bestPage.grade.grade).toBe("A");
   });
 
   it("入力 URL は www・スキーム・末尾スラッシュの違いを吸収して照合する", () => {
@@ -315,7 +320,7 @@ describe("buildSiteSummary", () => {
     expect(lineText(s.commentary[0])).toContain("4 ページの平均で総合");
     expect(lineNums(s.commentary[0])).toContain(String(s.overall));
     expect(lineText(s.commentary[1])).toBe(
-      "全 4 ページ共通の未対応が 1 項目あり、テンプレートの修正で全ページに効果があります。",
+      "全 4 ページ共通の重大な問題が 1 項目あり、テンプレートの修正で全ページに効果があります。",
     );
     expect(lineText(s.commentary[2])).toContain("優先改善 TOP3 に対応すると");
     for (const line of s.commentary) {
@@ -332,7 +337,7 @@ describe("buildSiteSummary", () => {
     );
     expect(s.uniformFailCount).toBe(0);
     expect(lineText(s.commentary[1])).toBe(
-      `最も低いのは${CATEGORY_LABELS.structuredData}（60 点）で、未対応 2 件・改善余地 1 件の判定があります。`,
+      `最も低いのは${CATEGORY_LABELS.structuredData}（60 点）で、重大 2 件・警告 1 件の判定があります。`,
     );
   });
 
@@ -359,7 +364,9 @@ describe("buildSiteSummary", () => {
   });
 
   it("端ケース: 1 ページだけのサイト", () => {
-    const one = [mkSitePage("https://example.com/", { crawlers: 60, structuredData: 60, meta: 60, headings: 60, content: 60 })];
+    const one = [
+      mkSitePage("https://example.com/", Object.fromEntries(CATEGORY_ORDER.map((id) => [id, 60]))),
+    ];
     const s = buildSiteSummary(
       mkSite(one, [mkSiteCheck("title", "meta", { fail: 1 }), mkSiteCheck("lang", "meta", { pass: 1 })]),
     );
@@ -406,6 +413,6 @@ describe("buildSiteSummary", () => {
     expect(s.priorities.map((p) => p.id)).toEqual(["jsonld-search-action"]);
     expect(s.commentary).toHaveLength(3);
     expect(lineText(s.commentary[1])).toContain("2 ページのすべてで主要項目を満たしています");
-    expect(lineText(s.commentary[2])).toContain("参考項目（2 件）");
+    expect(lineText(s.commentary[2])).toContain("情報（2 件）");
   });
 });

@@ -67,12 +67,12 @@ function PriorityList({ items, emptyText }: { items: PriorityItem[]; emptyText: 
                 )}
                 {item.counts.fail > 0 && (
                   <>
-                    ・未対応 <Num>{fmt(item.counts.fail)}</Num> ページ
+                    ・重大 <Num>{fmt(item.counts.fail)}</Num> ページ
                   </>
                 )}
                 {item.counts.warn > 0 && (
                   <>
-                    ・改善余地 <Num>{fmt(item.counts.warn)}</Num> ページ
+                    ・警告 <Num>{fmt(item.counts.warn)}</Num> ページ
                   </>
                 )}
               </p>

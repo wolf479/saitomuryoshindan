@@ -382,8 +382,8 @@ export function checkCrawlers(
       status: "info",
       label:
         blockedTraining.length === 0
-          ? "学習用 AI クローラも許可されている（参考）"
-          : `学習用 AI クローラを ${blockedTraining.length} 種拒否している（参考）`,
+          ? "学習用 AI クローラも許可されている（情報）"
+          : `学習用 AI クローラを ${blockedTraining.length} 種拒否している（情報）`,
       evidence:
         blockedTraining.length === 0
           ? `学習用 ${TRAINING_CRAWLERS.length} 種はすべて許可されています`
@@ -432,7 +432,7 @@ export function checkCrawlers(
       id: "llms-txt",
       category: "crawlers",
       status: "info",
-      label: hasLlms ? "llms.txt が設置されている（参考）" : "llms.txt は設置されていない（参考）",
+      label: hasLlms ? "llms.txt が設置されている（情報）" : "llms.txt は設置されていない（情報）",
       evidence: hasLlms
         ? `${origin}/llms.txt（${files.llmsTxt.length} 文字）`
         : `${origin}/llms.txt → HTTP ${files.llmsTxt.status || "取得失敗"}`,

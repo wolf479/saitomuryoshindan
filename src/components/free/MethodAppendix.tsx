@@ -20,10 +20,10 @@ const TD = "border-b border-line px-2 py-2 align-top text-[13px] text-ink";
 
 const SCORING_ROWS: { label: string; ratio: string; note: string }[] = [
   { label: "合格", ratio: "配点の 100%", note: "条件を満たしています" },
-  { label: "改善余地", ratio: "配点の 50%", note: "設定はあるものの、内容や量に改善の余地があります" },
-  { label: "未対応", ratio: "0 点", note: "条件を満たしていません" },
+  { label: "警告", ratio: "配点の 50%", note: "設定はあるものの、内容や量に改善の余地があります" },
+  { label: "重大", ratio: "0 点", note: "条件を満たしておらず、優先して直すべき項目です" },
   {
-    label: "参考",
+    label: "情報",
     ratio: "採点対象外",
     note: "根拠が確立していない項目・そのページに当てはまらない項目。状態は表示しますが加点も減点もしません",
   },
@@ -181,7 +181,8 @@ export function MethodAppendix({
       </ul>
 
       <p className="mt-4 text-[12px] leading-relaxed text-muted">
-        表示速度・被リンク・検索順位は含みません。JavaScript で描画される内容は取得時点の HTML に含まれない場合があります。
+        表示速度は、診断サーバーが HTML を取得したときの応答時間と HTML の中身から判定した簡易的な目安で、画像やスクリプトを含めた実際の表示時間（Core
+        Web Vitals）ではありません。被リンク・検索順位は含みません。JavaScript で描画される内容は取得時点の HTML に含まれない場合があります。
       </p>
       <p className="mt-1 text-[11px] text-muted">
         診断日時: <Num>{formatDateTimeSeconds(fetchedAt)}</Num> ／ 使用ツール: {BRAND.name}（SEO・AIO 無料診断）v
@@ -228,8 +229,8 @@ export function ReportFooter() {
     <footer className="mt-8 border-t border-line pt-4">
       <p className="text-[11px] leading-relaxed text-muted">
         本レポートはルールベースの自動診断です。生成 AI による解釈は含まれておらず、同じページを診断すれば同じ結果になります。
-        公開されている HTML・robots.txt・llms.txt・sitemap.xml のみを対象としており、表示速度・被リンク・検索順位・実際の AI
-        検索での引用状況は評価に含みません。スコアは本ツール独自の技術チェック表の達成率であり、検索順位・流入・AI
+        公開されている HTML・robots.txt・llms.txt・sitemap.xml のみを対象としており、被リンク・検索順位・実際の AI
+        検索での引用状況は評価に含みません。表示速度は HTML の応答時間などから見た簡易的な目安です。スコアは本ツール独自の技術チェック表の達成率であり、検索順位・流入・AI
         の回答への引用を測ったものでも、それらを予測するものでもありません。点数の上昇は「技術的な変更をツールが認識した」ことを示すもので、
         成果そのものの証拠ではありません。実績の確認には Search Console の表示回数・検索語・インデックス状況、問い合わせの転換、Core Web
         Vitals をご利用ください。

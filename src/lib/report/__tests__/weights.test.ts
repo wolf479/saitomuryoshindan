@@ -44,6 +44,7 @@ function fetched(body: string, url = "https://example.com/"): FetchedText {
     contentType: "text/html; charset=utf-8",
     body,
     headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+    timing: { ttfbMs: 300, totalMs: 400, bytes: body.length },
   };
 }
 
@@ -210,7 +211,7 @@ describe("buildSiteSummary（analyzer の実出力）", () => {
     expect(crawlers?.affectedCount).toBe(2);
     expect(s.priorities.find((p) => p.id === "js-rendering")?.spread).toBe("mixed");
     expect(s.uniformFailCount).toBeGreaterThan(0);
-    expect(lineText(s.commentary[1])).toContain("全 2 ページ共通の未対応");
+    expect(lineText(s.commentary[1])).toContain("全 2 ページ共通の重大な問題");
     expect(s.priorities.every((p) => p.totalPages === 2)).toBe(true);
     expect(s.projected).toBeLessThanOrEqual(100);
   });

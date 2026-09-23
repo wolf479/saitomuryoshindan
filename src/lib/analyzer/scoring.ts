@@ -12,6 +12,11 @@ const CATEGORY_ORDER: CategoryId[] = [
   "meta",
   "headings",
   "content",
+  "trust",
+  "contact",
+  "performance",
+  "security",
+  "mobile",
 ];
 
 /** カテゴリ内の獲得点 / 配点 を 0-100 に正規化する。info（配点 0）は無視 */

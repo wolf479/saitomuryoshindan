@@ -544,12 +544,12 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
   if (counts.fail === 0 && counts.warn === 0) {
     const praise: CommentaryLine = [
       numPart(pageCount),
-      " ページのすべてで主要項目を満たしています。未対応・改善余地のある判定はありません。",
+      " ページのすべてで主要項目を満たしています。重大・警告の判定はありません。",
     ];
     const next: CommentaryLine =
       counts.info > 0
         ? [
-            "参考項目（",
+            "情報（",
             numPart(counts.info),
             " 件）に対応すると、さらに AI 検索への適合度を高められます。",
           ]
@@ -565,7 +565,7 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
     issue.push(
       "全 ",
       numPart(pageCount),
-      " ページ共通の未対応が ",
+      " ページ共通の重大な問題が ",
       numPart(uniformFailCount),
       " 項目あり、テンプレートの修正で全ページに効果があります。",
     );
@@ -575,16 +575,16 @@ function buildCommentary(input: CommentaryInput): CommentaryLine[] {
     const tail = "の判定があります。";
     if (counts.fail > 0 && counts.warn > 0) {
       issue.push(
-        "未対応 ",
+        "重大 ",
         numPart(counts.fail),
-        ` ${unit}・改善余地 `,
+        ` ${unit}・警告 `,
         numPart(counts.warn),
         ` ${unit}${tail}`,
       );
     } else if (counts.fail > 0) {
-      issue.push("未対応 ", numPart(counts.fail), ` ${unit}${tail}`);
+      issue.push("重大 ", numPart(counts.fail), ` ${unit}${tail}`);
     } else {
-      issue.push("改善余地 ", numPart(counts.warn), ` ${unit}${tail}`);
+      issue.push("警告 ", numPart(counts.warn), ` ${unit}${tail}`);
     }
   }
 

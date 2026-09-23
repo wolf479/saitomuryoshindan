@@ -6,6 +6,8 @@ import { checkStructuredData, extractJsonLd } from "./jsonld";
 import { checkMeta, extractMeta } from "./meta";
 import { checkCrawlers, inspectCrawlers, type SiteFiles } from "./robots";
 import { buildCategories, overallScore } from "./scoring";
+import { checkMobile, checkPerformance, checkSecurity } from "./technical";
+import { checkContact, checkTrust, extractTrust } from "./trust";
 import type { AnalysisResult, CheckResult } from "./types";
 
 export { FetchError, type FetchedText } from "./fetch";
@@ -67,6 +69,7 @@ export function analyzeFetched(
   const meta = extractMeta($);
   const headings = extractHeadings($);
   const jsonLd = extractJsonLd($);
+  const trust = extractTrust($, finalUrl.toString());
 
   // クローラまわりは 1 度だけ読み取り、採点と「採点対象にするか」の判断で共有する
   const crawlers = inspectCrawlers(finalUrl, $, page.headers, siteFiles);
@@ -85,6 +88,11 @@ export function analyzeFetched(
     ...checkMeta($),
     ...checkHeadings($),
     ...checkContent(contentInfo),
+    ...checkTrust(trust),
+    ...checkContact(trust),
+    ...checkPerformance($, page.timing),
+    ...checkSecurity($, finalUrl, page.headers),
+    ...checkMobile($),
   ];
 
   const categories = buildCategories(checks);
@@ -108,5 +116,6 @@ export function analyzeFetched(
     overall: overallScore(categories),
     categories,
     notes,
+    facts: trust.facts,
   };
 }

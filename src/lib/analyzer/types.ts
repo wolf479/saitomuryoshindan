@@ -13,7 +13,12 @@ export type CategoryId =
   | "structuredData"
   | "meta"
   | "headings"
-  | "content";
+  | "content"
+  | "trust"
+  | "contact"
+  | "performance"
+  | "security"
+  | "mobile";
 
 /* ─────────────────────────────────────────────────────────────
    検索対象から外されているページ。
@@ -85,6 +90,18 @@ export interface AnalysisResult {
   categories: CategoryScore[];
   /** 診断中に起きた非致命的な問題 */
   notes: string[];
+  /**
+   * ページに書かれた会社情報（電話番号・社名・郵便番号）。
+   * サイト診断で「ページ間で一致しているか」を確かめるために使う。
+   */
+  facts?: CompanyFacts;
+}
+
+/** ページに書かれた会社情報。値はすべて比較用に正規化済み（電話番号は数字だけ） */
+export interface CompanyFacts {
+  phones: string[];
+  orgNames: string[];
+  postalCodes: string[];
 }
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {
@@ -93,15 +110,25 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
   meta: "メタ情報",
   headings: "見出し",
   content: "コンテンツ",
+  trust: "信頼性",
+  contact: "問い合わせ導線",
+  performance: "表示速度",
+  security: "セキュリティ",
+  mobile: "モバイル対応",
 };
 
 /** 総合スコアを出すときのカテゴリ重み */
 export const CATEGORY_WEIGHTS: Record<CategoryId, number> = {
-  crawlers: 20,
-  structuredData: 25,
-  meta: 20,
-  headings: 15,
-  content: 20,
+  crawlers: 15,
+  structuredData: 15,
+  meta: 10,
+  headings: 10,
+  content: 15,
+  trust: 10,
+  contact: 10,
+  performance: 5,
+  security: 5,
+  mobile: 5,
 };
 
 // ---------------------------------------------------------------------------

@@ -12,7 +12,16 @@ import { Button, Callout } from "@/components/ui";
 import type { SiteAnalysisResult, SiteProgress } from "@/lib/analyzer/types";
 import { requestSiteAnalysis, SiteRequestError } from "@/lib/crawl/client";
 import { downloadPdf } from "@/lib/pdf/download";
-import { reportFileName } from "@/lib/report";
+import {
+  buildIssuesCsv,
+  compareSnapshots,
+  issuesCsvFileName,
+  previousSnapshot,
+  reportFileName,
+  saveSnapshot,
+  snapshotOf,
+  type DiagnosisComparison,
+} from "@/lib/report";
 import { DiagnosisForm } from "./DiagnosisForm";
 import { Download } from "./Icons";
 import { ProgressPanel } from "./ProgressPanel";
@@ -22,7 +31,26 @@ type State =
   | { phase: "idle" }
   | { phase: "loading"; progress: SiteProgress | null }
   | { phase: "error"; message: string }
-  | { phase: "done"; result: SiteAnalysisResult; cached: boolean; elapsedMs: number };
+  | {
+      phase: "done";
+      result: SiteAnalysisResult;
+      cached: boolean;
+      elapsedMs: number;
+      comparison: DiagnosisComparison | null;
+    };
+
+/** 課題一覧の CSV を保存させる。Excel で文字化けしないよう BOM を付ける */
+function downloadCsv(text: string, fileName: string) {
+  const blob = new Blob(["\uFEFF", text], { type: "text/csv;charset=utf-8" });
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
+}
 
 function messageOf(err: unknown): string {
   if (err instanceof SiteRequestError) return err.message;
@@ -86,11 +114,16 @@ export function Checker() {
           setState((prev) => (prev.phase === "loading" ? { ...prev, progress } : prev)),
       });
       if (controller.signal.aborted) return;
+      // 同じブラウザに前回の診断があれば比較を出し、今回の要約を残す
+      const snapshot = snapshotOf(result);
+      const previous = previousSnapshot(snapshot);
+      saveSnapshot(snapshot);
       setState({
         phase: "done",
         result,
         cached,
         elapsedMs: Date.now() - startedAtRef.current,
+        comparison: previous ? compareSnapshots(previous, snapshot) : null,
       });
     } catch (err) {
       // 中止ボタン・画面離脱による中断はエラーとして扱わない
@@ -150,6 +183,14 @@ export function Checker() {
             )}
             <Button
               size="sm"
+              variant="secondary"
+              onClick={() => downloadCsv(buildIssuesCsv(state.result), issuesCsvFileName(fileName))}
+              icon={<Download className="h-4 w-4" />}
+            >
+              課題一覧（CSV）
+            </Button>
+            <Button
+              size="sm"
               onClick={() => onDownloadPdf(fileName)}
               loading={pdf === "working"}
               icon={<Download className="h-4 w-4" />}
@@ -164,7 +205,7 @@ export function Checker() {
           </div>
 
           <div ref={reportRef} className="@container">
-            <SiteReport result={state.result} elapsedMs={state.elapsedMs} />
+            <SiteReport result={state.result} elapsedMs={state.elapsedMs} comparison={state.comparison} />
           </div>
         </>
       )}

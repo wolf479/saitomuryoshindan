@@ -4,6 +4,8 @@ import { canonicalizeUrl, pathDepth } from "@/lib/crawl/url";
 import { analyzeFetched, assertHtmlPage } from "./index";
 import { assertPublicHost, FetchError, fetchText, normalizeUrl } from "./fetch";
 import { fetchSiteFiles } from "./robots";
+import { buildCategories, overallScore } from "./scoring";
+import { companyConsistencyCheck, factMajority, siteFactMismatches } from "./trust";
 import {
   CATEGORY_LABELS,
   type AnalysisResult,
@@ -138,6 +140,11 @@ export async function analyzeSite(
   const scoredAnalyses = analyses.filter(({ result }) => !result.exclusion);
   const allExcluded = scoredAnalyses.length === 0;
   const scored = allExcluded ? analyses : scoredAnalyses;
+  // 会社情報の一致はページ内だけでは測りきれないので、全ページの多数派と比べ直す
+  if (scored.length > 1) {
+    const majority = factMajority(scored.map(({ result }) => result.facts ?? EMPTY_FACTS));
+    for (const entry of scored) entry.result = withSiteConsistency(entry.result, majority);
+  }
   const excluded: SiteExcludedPage[] = allExcluded
     ? []
     : analyses
@@ -248,6 +255,26 @@ export async function analyzeSite(
   };
 }
 
+const EMPTY_FACTS = { phones: [], orgNames: [], postalCodes: [] };
+
+/**
+ * 「会社情報の一致」をサイト全体の多数派と比べた判定に置き換え、スコアを組み直す。
+ * サイトの多数派と食い違わなければ、ページ内（構造化データと画面表記）の判定をそのまま残す。
+ */
+export function withSiteConsistency(
+  result: AnalysisResult,
+  majority: ReturnType<typeof factMajority>,
+): AnalysisResult {
+  const mismatches = siteFactMismatches(result.facts ?? EMPTY_FACTS, majority);
+  if (mismatches.length === 0) return result;
+  const replacement = companyConsistencyCheck(mismatches, "site", true);
+  const checks = result.categories
+    .flatMap((c) => c.checks)
+    .map((c) => (c.id === replacement.id ? replacement : c));
+  const categories = buildCategories(checks);
+  return { ...result, categories, overall: overallScore(categories) };
+}
+
 function average(values: number[]): number {
   if (values.length === 0) return 0;
   return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
@@ -271,8 +298,9 @@ export function summarizeCategories(pages: SitePageResult[]): SiteCategoryScore[
 /**
  * 項目ごとに残す「該当ページ」の実例の上限。
  * 画面は 8 件しか出さず（DetailSection）、残りは counts から件数で示す。
+ * CSV の課題一覧には全件を載せたいので、ページ数の上限（100）と同じにしている。
  */
-export const MAX_AFFECTED_SAMPLES = 50;
+export const MAX_AFFECTED_SAMPLES = 100;
 
 /**
  * 項目ごとにページ横断で集計する。

@@ -62,7 +62,7 @@ export const GRADE_BANDS: readonly GradeBand[] = [
   { grade: "E", min: 0, label: "要対策" },
 ] as const;
 
-/** 判定の閾値。80 以上 = 合格域、50〜79 = 改善域、50 未満 = 未対応域 */
+/** 判定の閾値。80 以上 = 合格域、50〜79 = 警告域、50 未満 = 重大域 */
 export const TONE_THRESHOLDS = { pass: 80, warn: 50 } as const;
 
 function clampScore(score: number): number {
@@ -127,7 +127,7 @@ export const TONE_CLASSES: Record<StatusTone, { text: string; bg: string; border
 /** 判定区分の日本語ラベル */
 export const TONE_LABELS: Record<StatusTone, string> = {
   pass: "合格",
-  warn: "改善余地",
-  fail: "未対応",
-  info: "参考",
+  warn: "警告",
+  fail: "重大",
+  info: "情報",
 };

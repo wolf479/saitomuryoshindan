@@ -52,13 +52,13 @@ export function OverallSection({ summary, number }: { summary: SiteReportSummary
         items={[
           { label: "判定数（ページ × 項目）", value: fmt(counts.scored), unit: "件" },
           { label: "合格", value: fmt(counts.pass), unit: "件" },
-          { label: "改善余地", value: fmt(counts.warn), unit: "件" },
-          { label: "未対応", value: fmt(counts.fail), unit: "件" },
+          { label: "警告", value: fmt(counts.warn), unit: "件" },
+          { label: "重大", value: fmt(counts.fail), unit: "件" },
         ]}
       />
       {counts.info > 0 && (
         <p className="mt-2 text-[11px] text-muted">
-          ほかに参考項目が <Num>{fmt(counts.info)}</Num> 件あります（任意項目のため採点対象外）。
+          ほかに情報が <Num>{fmt(counts.info)}</Num> 件あります（任意項目のため採点対象外）。
         </p>
       )}
     </ReportSection>

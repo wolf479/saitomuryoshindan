@@ -465,8 +465,8 @@ describe("scoring", () => {
     const categories = buildCategories([
       check({ id: "x", category: "crawlers", status: "fail", weight: 1, label: "" }),
     ]);
-    // crawlers 0点 (重み20), 他 4 カテゴリは 100 点 (重み合計80) → 80
-    expect(overallScore(categories)).toBe(80);
+    // crawlers 0点 (重み15), 他 9 カテゴリは 100 点 (重み合計85) → 85
+    expect(overallScore(categories)).toBe(85);
   });
 });
 
@@ -631,13 +631,13 @@ describe("summarizeCategories", () => {
     {
       url: "https://example.com/",
       overall: 80,
-      scores: { crawlers: 70, structuredData: 90, meta: 100, headings: 100, content: 100 },
+      scores: { crawlers: 70, structuredData: 90, meta: 100, headings: 100, content: 100, trust: 100, contact: 100, performance: 100, security: 100, mobile: 100 },
       page: fakeAnalysis("https://example.com/", []).result.page,
     },
     {
       url: "https://example.com/company",
       overall: 60,
-      scores: { crawlers: 70, structuredData: 60, meta: 80, headings: 100, content: 50 },
+      scores: { crawlers: 70, structuredData: 60, meta: 80, headings: 100, content: 50, trust: 100, contact: 100, performance: 100, security: 100, mobile: 100 },
       page: fakeAnalysis("https://example.com/company", []).result.page,
     },
   ];

@@ -9,8 +9,8 @@ import { Num, ReportSection, SubHeading } from "./report-parts";
 function segmentsOf(counts: { pass: number; warn: number; fail: number }): PieSegment[] {
   return [
     { label: "合格", value: counts.pass, color: palette.pass },
-    { label: "改善余地", value: counts.warn, color: palette.warn },
-    { label: "未対応", value: counts.fail, color: palette.fail },
+    { label: "警告", value: counts.warn, color: palette.warn },
+    { label: "重大", value: counts.fail, color: palette.fail },
   ];
 }
 
@@ -33,15 +33,15 @@ export function SiteBreakdownSection({
             segments={segmentsOf(summary.counts)}
             centerLabel={fmt(summary.counts.scored)}
             centerSub="判定"
-            ariaLabel={`判定の内訳: 合格 ${summary.counts.pass} 件、改善余地 ${summary.counts.warn} 件、未対応 ${summary.counts.fail} 件`}
+            ariaLabel={`判定の内訳: 合格 ${summary.counts.pass} 件、警告 ${summary.counts.warn} 件、重大 ${summary.counts.fail} 件`}
           />
           <p className="mt-3 text-[12px] leading-relaxed text-muted">
             {summary.uniformFailCount > 0 ? (
               <>
-                全ページ共通で未対応の項目が <Num>{fmt(summary.uniformFailCount)}</Num> 件あります（テンプレートやサイト設定を 1 箇所直せば全ページに効きます）。
+                全ページ共通で重大の項目が <Num>{fmt(summary.uniformFailCount)}</Num> 件あります（テンプレートやサイト設定を 1 箇所直せば全ページに効きます）。
               </>
             ) : (
-              "全ページ共通で未対応になっている項目はありません。"
+              "全ページ共通で重大になっている項目はありません。"
             )}
           </p>
         </div>

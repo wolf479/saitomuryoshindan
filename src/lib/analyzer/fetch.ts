@@ -107,6 +107,20 @@ export interface FetchedText {
   contentType: string;
   body: string;
   headers: Headers;
+  /**
+   * 診断サーバーから見た取得時間（ミリ秒）。リダイレクトを含めて最初の要求から数える。
+   * 取得できなかったとき・手組みのテストデータでは無い（「未取得」として扱い、0 と混同しない）。
+   */
+  timing?: FetchTiming;
+}
+
+export interface FetchTiming {
+  /** 最終的なレスポンスのヘッダーを受け取るまで（TTFB 相当） */
+  ttfbMs: number;
+  /** HTML の受信が終わるまで */
+  totalMs: number;
+  /** 受信したバイト数（デコード前） */
+  bytes: number;
 }
 
 /** 追跡してよいリダイレクトの回数 */
@@ -179,6 +193,7 @@ export async function fetchText(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const maxBytes = options.maxBytes ?? MAX_BYTES;
+  const started = performance.now();
   try {
     const { res, finalUrl } = await fetchFollowingRedirects(url, {
       headers: {
@@ -189,6 +204,7 @@ export async function fetchText(
       signal: controller.signal,
       cache: "no-store",
     });
+    const ttfbMs = performance.now() - started;
 
     const reader = res.body?.getReader();
     const chunks: Uint8Array[] = [];
@@ -221,6 +237,11 @@ export async function fetchText(
       contentType,
       body,
       headers: res.headers,
+      timing: {
+        ttfbMs: Math.round(ttfbMs),
+        totalMs: Math.round(performance.now() - started),
+        bytes: received,
+      },
     };
   } catch (err) {
     if (err instanceof FetchError) throw err;

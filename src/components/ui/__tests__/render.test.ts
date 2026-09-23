@@ -15,7 +15,7 @@ describe("Badge", () => {
     expect(html).toContain("border-warn");
     expect(html).toContain("bg-warn-soft");
     expect(html).toContain("<svg");
-    expect(html).toContain("改善余地");
+    expect(html).toContain("警告");
   });
   it("文言は差し替えられる", () => {
     expect(renderToStaticMarkup(createElement(Badge, { tone: "pass" }, "対応済み"))).toContain("対応済み");

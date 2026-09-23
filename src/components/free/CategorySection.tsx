@@ -1,6 +1,6 @@
 /**
  * 2. カテゴリ別スコア（design-spec §3.2-2 / §3.3-2）。
- * 目盛（50 / 80）付きの横棒 5 行と、配点・判定の表。棒には最低〜最高のレンジ帯を重ねる。
+ * 目盛（50 / 80）付きのカテゴリ別の横棒と、配点・判定の表。棒には最低〜最高のレンジ帯を重ねる。
  */
 import { HBar, type HBarRow } from "@/components/charts";
 import { Badge, DataTable, type Column } from "@/components/ui";
@@ -52,7 +52,7 @@ export function CategorySection({ summary, number }: { summary: SiteReportSummar
     <ReportSection
       number={number}
       title="カテゴリ別スコア"
-      lead="総合スコアは 5 カテゴリを配点で加重平均した値です。棒は全ページの平均、帯は最低〜最高の幅を表します。"
+      lead={`総合スコアは ${summary.categories.length} カテゴリを配点で加重平均した値です。棒は全ページの平均、帯は最低〜最高の幅を表します。`}
     >
       <HBar rows={rows} labelWidth="7.5rem" ariaLabel="カテゴリ別スコア" />
       <div className="mt-5">

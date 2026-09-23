@@ -1,7 +1,7 @@
 import robotsParser from "robots-parser";
 import * as cheerio from "cheerio";
 import { check, optionalCheck } from "./check";
-import { fetchText } from "./fetch";
+import { fetchText, type FetchedText } from "./fetch";
 import type {
   CheckResult,
   CheckStatus,
@@ -81,12 +81,33 @@ export interface SiteFiles {
   llmsFullTxt: { present: boolean; length: number };
 }
 
+/**
+ * 任意ファイルを取得する。大きすぎ・時間切れでも診断全体は止めない。
+ * llms-full.txt はサイト全文を入れるファイルなので数 MB を超えることが珍しくなく、
+ * 上限を超えても先頭だけ読めば「置いてあるか」は判定できる。
+ * 取得できなかったときは「無い」として扱う。
+ */
+async function fetchOptionalFile(url: string): Promise<FetchedText> {
+  try {
+    return await fetchText(url, { timeoutMs: 8000, truncate: true });
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      finalUrl: url,
+      contentType: "",
+      body: "",
+      headers: new Headers(),
+    };
+  }
+}
+
 /** robots.txt / llms.txt / llms-full.txt をまとめて取得する */
 export async function fetchSiteFiles(origin: string): Promise<SiteFiles> {
   const [robotsRes, llmsRes, llmsFullRes] = await Promise.all([
-    fetchText(`${origin}/robots.txt`, { timeoutMs: 8000 }),
-    fetchText(`${origin}/llms.txt`, { timeoutMs: 8000 }),
-    fetchText(`${origin}/llms-full.txt`, { timeoutMs: 8000 }),
+    fetchOptionalFile(`${origin}/robots.txt`),
+    fetchOptionalFile(`${origin}/llms.txt`),
+    fetchOptionalFile(`${origin}/llms-full.txt`),
   ]);
 
   const robotsTxt = robotsRes.ok && !looksLikeHtml(robotsRes) ? robotsRes.body : null;

@@ -88,6 +88,10 @@ export interface RankedPage {
   grade: GradeInfo;
   scores: Record<CategoryId, number>;
   isEntry: boolean;
+  /** 受信した HTML のバイト数（測っていなければ無い） */
+  htmlBytes?: number;
+  /** 上限で受信を打ち切った（実際は htmlBytes より大きい） */
+  htmlTruncated?: boolean;
 }
 
 /** 優先改善リストの 1 行（site） */

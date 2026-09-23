@@ -46,6 +46,8 @@ function siteSnapshot(page: PageSnapshot): SitePageResult["page"] {
     rawTextLength: page.rawTextLength,
     jsonLdTypes: page.jsonLdTypes,
     h1Count: page.h1Count,
+    ...(page.htmlBytes !== undefined && { htmlBytes: page.htmlBytes }),
+    ...(page.htmlTruncated && { htmlTruncated: true }),
     fetchedAt: page.fetchedAt,
   };
 }

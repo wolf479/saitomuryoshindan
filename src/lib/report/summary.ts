@@ -332,6 +332,8 @@ function toRankedPage(entry: PageEntry, rank: number): RankedPage {
     grade: gradeOf(entry.score),
     scores,
     isEntry: entry.isEntry,
+    ...(entry.page.page?.htmlBytes !== undefined && { htmlBytes: entry.page.page.htmlBytes }),
+    ...(entry.page.page?.htmlTruncated && { htmlTruncated: true }),
   };
 }
 

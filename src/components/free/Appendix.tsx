@@ -10,7 +10,7 @@ import type {
   SiteExcludedPage,
   SitePageFailure,
 } from "@/lib/analyzer/types";
-import { fmt, formatDuration, pathOf, type SiteReportSummary } from "@/lib/report";
+import { fmt, formatBytes, formatDuration, pathOf, type RankedPage, type SiteReportSummary } from "@/lib/report";
 import { DISCOVERY_LABEL, EmptyLine, KeyValue, Num, ReportSection, SubHeading } from "./report-parts";
 
 const FAILURE_COLUMNS: Column<SitePageFailure>[] = [
@@ -48,6 +48,27 @@ function truncationLabel(crawl: SiteCrawlStats): string {
     : `制限時間 ${fmt(Math.round(crawl.truncated.limit / 1000))} 秒に達したため打ち切りました`;
 }
 
+/** 「12.3 KB」。上限で打ち切ったページは「1.4 MB 超」 */
+function sizeLabel(page: Pick<RankedPage, "htmlBytes" | "htmlTruncated">): string {
+  if (page.htmlBytes === undefined) return "-";
+  return `${formatBytes(page.htmlBytes)}${page.htmlTruncated ? " 超" : ""}`;
+}
+
+/** 受信した HTML の合計・平均・最大（測れたページだけで数える） */
+function htmlSizeStats(pages: RankedPage[]) {
+  const measured = pages.filter((p) => p.htmlBytes !== undefined);
+  if (measured.length === 0) return null;
+  const total = measured.reduce((n, p) => n + p.htmlBytes!, 0);
+  const largest = measured.reduce((a, b) => (b.htmlBytes! > a.htmlBytes! ? b : a));
+  return {
+    count: measured.length,
+    total,
+    average: total / measured.length,
+    largest,
+    anyTruncated: measured.some((p) => p.htmlTruncated),
+  };
+}
+
 export function SiteAppendix({
   result,
   summary,
@@ -58,6 +79,7 @@ export function SiteAppendix({
   number: string;
 }) {
   const crawl = result.crawl;
+  const sizes = htmlSizeStats(summary.rankedPages);
   return (
     <ReportSection number={number} title="診断ページ一覧">
       <dl className="grid gap-x-8 @md:grid-cols-2">
@@ -66,6 +88,9 @@ export function SiteAppendix({
             <dt className="w-7 shrink-0 text-right text-muted tabular-nums">{page.rank}</dt>
             <dd className="flex min-w-0 flex-1 items-baseline gap-2">
               <span className="min-w-0 flex-1 break-all text-ink">{page.path}</span>
+              <span className="shrink-0 text-[11px] text-muted tabular-nums" title="受信した HTML の大きさ">
+                {sizeLabel(page)}
+              </span>
               <span className="shrink-0 font-bold text-ink tabular-nums">{page.overall}</span>
               <span className="w-3 shrink-0 text-right font-bold" style={{ color: page.grade.color }}>
                 {page.grade.grade}
@@ -136,6 +161,19 @@ export function SiteAppendix({
           上限 <Num>{fmt(crawl.maxPages)}</Num> ページ / {truncationLabel(crawl)}
         </KeyValue>
         <KeyValue term="クロールの所要時間">{formatDuration(crawl.durationMs)}</KeyValue>
+        {sizes && (
+          <KeyValue term="受信した HTML の大きさ（画像などは含まない）">
+            合計 <Num>{formatBytes(sizes.total)}</Num>
+            {sizes.anyTruncated && " 超"} / 平均 <Num>{formatBytes(sizes.average)}</Num> / 最大{" "}
+            <Num>{sizeLabel(sizes.largest)}</Num>（<span className="break-all">{sizes.largest.path}</span>）
+            {sizes.count < summary.rankedPages.length && (
+              <>
+                {" "}
+                ※ 計測できた <Num>{fmt(sizes.count)}</Num> ページ分
+              </>
+            )}
+          </KeyValue>
+        )}
       </dl>
 
       {result.notes.length > 0 && (

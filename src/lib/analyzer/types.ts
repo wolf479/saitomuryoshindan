@@ -76,6 +76,13 @@ export interface PageSnapshot {
   rawTextLength: number;
   jsonLdTypes: string[];
   h1Count: number;
+  /**
+   * 受信した HTML のバイト数（デコード前・画像などは含まない）。
+   * `htmlTruncated` のときは上限までの数で、実際はこれより大きい。
+   * 取得時間を測っていない（手組みのテストデータ・古い履歴）ときは無い。
+   */
+  htmlBytes?: number;
+  htmlTruncated?: boolean;
   fetchedAt: string;
 }
 

@@ -110,6 +110,10 @@ export function analyzeFetched(
       rawTextLength: contentInfo.rawTextLength,
       jsonLdTypes: jsonLd.types,
       h1Count: headings.counts[1],
+      ...(page.timing && {
+        htmlBytes: page.timing.bytes,
+        ...(page.timing.truncated && { htmlTruncated: true }),
+      }),
       fetchedAt: new Date().toISOString(),
     },
     exclusion: crawlers.exclusion,

@@ -28,6 +28,16 @@ export function fmt(n: number): string {
   return Number.isFinite(n) ? n.toLocaleString("ja-JP") : "-";
 }
 
+/** バイト数 → 「820 B」「12.3 KB」「1.4 MB」 */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "-";
+  if (bytes < 1024) return `${fmt(bytes)} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb < 10 ? kb.toFixed(1) : fmt(Math.round(kb))} KB`;
+  const mb = kb / 1024;
+  return `${mb < 10 ? mb.toFixed(1) : fmt(Math.round(mb))} MB`;
+}
+
 function parts(iso: string): Date | null {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? null : d;

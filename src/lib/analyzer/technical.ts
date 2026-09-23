@@ -70,7 +70,9 @@ export function checkPerformance($: cheerio.CheerioAPI, timing: FetchTiming | un
       status: sizeStatus,
       weight: 1,
       label: sizeStatus === "pass" ? "HTML の大きさが適正" : "HTML が大きすぎる",
-      evidence: `HTML ${kb(bytes)}（目安 ${kb(HTML_GOOD_BYTES)} 以下）`,
+      evidence: timing?.truncated
+        ? `HTML ${kb(bytes)} 超（大きすぎる・受信が遅すぎるため先頭 ${kb(bytes)} だけを読んで採点しました。目安 ${kb(HTML_GOOD_BYTES)} 以下）`
+        : `HTML ${kb(bytes)}（目安 ${kb(HTML_GOOD_BYTES)} 以下）`,
       advice:
         "HTML が大きいと、通信の遅いスマートフォンで表示が始まるまでに時間がかかります。ページに直接埋め込んだ画像データ（data:）・大きなインラインスクリプトやスタイル・不要なプラグインの出力を減らしてください。",
     }),

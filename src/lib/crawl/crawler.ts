@@ -1,4 +1,4 @@
-import { FetchError, fetchText, type FetchedText } from "@/lib/analyzer/fetch";
+import { FetchError, fetchText, type FetchedText, PAGE_MAX_BYTES } from "@/lib/analyzer/fetch";
 import type { SiteFiles } from "@/lib/analyzer/robots";
 import { discoverSitemapUrls } from "./discover";
 import { drainQueue } from "./pool";
@@ -159,7 +159,11 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       page =
         options.entryPage && url === entryUrl
           ? options.entryPage
-          : await fetchText(url, { timeoutMs: PAGE_TIMEOUT_MS });
+          : await fetchText(url, {
+              timeoutMs: PAGE_TIMEOUT_MS,
+              maxBytes: PAGE_MAX_BYTES,
+              truncate: true,
+            });
     } catch (err) {
       fetched += 1;
       // 診断できないホスト（内部アドレスへの転送など）は失敗一覧に出さずに読み飛ばす。

@@ -45,6 +45,17 @@ beforeAll(async () => {
       res.end();
       return;
     }
+    if (url === "/big") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(`<html><head><title>重いページ</title></head><body>${"x".repeat(4096)}</body></html>`);
+      return;
+    }
+    if (url === "/slow") {
+      // 先頭だけ送って残りを送らない（受信途中の時間切れ）
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.write("<html><head><title>遅いページ</title></head><body>");
+      return;
+    }
     if (url === "/ok") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       res.end("<html><body>OK</body></html>");
@@ -58,6 +69,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  server.closeAllConnections();
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await new Promise<void>((resolve) => secretServer.close(() => resolve()));
 });
@@ -119,6 +131,56 @@ describe("fetchText のリダイレクト追跡", () => {
       await expect(fetchText(`${origin}/loop`)).rejects.toMatchObject({
         name: "FetchError",
         code: "network",
+      });
+    } finally {
+      delete process.env.ALLOW_PRIVATE_HOSTS;
+    }
+  });
+});
+
+describe("fetchText のサイズ上限", () => {
+  it("既定では上限を超えると too_large で止める", async () => {
+    process.env.ALLOW_PRIVATE_HOSTS = "1";
+    try {
+      await expect(fetchText(`${origin}/big`, { maxBytes: 1024 })).rejects.toMatchObject({
+        name: "FetchError",
+        code: "too_large",
+      });
+    } finally {
+      delete process.env.ALLOW_PRIVATE_HOSTS;
+    }
+  });
+
+  it("truncate なら上限までで打ち切って返す（先頭の title は読める）", async () => {
+    process.env.ALLOW_PRIVATE_HOSTS = "1";
+    try {
+      const r = await fetchText(`${origin}/big`, { maxBytes: 1024, truncate: true });
+      expect(r.ok).toBe(true);
+      expect(r.body).toContain("<title>重いページ</title>");
+      expect(r.timing?.bytes).toBe(1024);
+      expect(r.timing?.truncated).toBe(true);
+    } finally {
+      delete process.env.ALLOW_PRIVATE_HOSTS;
+    }
+  });
+
+  it("truncate なら本文の受信中に時間切れになっても受信できた分を返す", async () => {
+    process.env.ALLOW_PRIVATE_HOSTS = "1";
+    try {
+      const r = await fetchText(`${origin}/slow`, { timeoutMs: 300, truncate: true });
+      expect(r.body).toContain("<title>遅いページ</title>");
+      expect(r.timing?.truncated).toBe(true);
+    } finally {
+      delete process.env.ALLOW_PRIVATE_HOSTS;
+    }
+  });
+
+  it("truncate なしで受信中に時間切れになれば timeout で止める", async () => {
+    process.env.ALLOW_PRIVATE_HOSTS = "1";
+    try {
+      await expect(fetchText(`${origin}/slow`, { timeoutMs: 300 })).rejects.toMatchObject({
+        name: "FetchError",
+        code: "timeout",
       });
     } finally {
       delete process.env.ALLOW_PRIVATE_HOSTS;
